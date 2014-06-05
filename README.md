@@ -8,4 +8,5 @@ This library comprises classes for movie playback and video capture. It is based
 Please submit all your bug reports and pull requests related to the video library here. Your contribution is really important to keep the Processing project moving forward!
 
 Andres Colubri
+
 5 June 2014
