@@ -199,6 +199,10 @@ public class Capture extends PImage implements PConstants {
     super(requestWidth, requestHeight, RGB);
     String idName;
     Object idValue;
+    if (-1 < cameraName.indexOf("name=")) {
+      // cameraName contains a full config string from gstreamer
+      cameraName = getName(cameraName);  
+    }    
     if (devicePropertyName.equals("")) {
       // For plugins without device name property, the name is casted
       // as an index
@@ -223,6 +227,10 @@ public class Capture extends PImage implements PConstants {
     super(requestWidth, requestHeight, RGB);
     String idName;
     Object idValue;
+    if (-1 < cameraName.indexOf("name=")) {
+      // cameraName contains a full config string from gstreamer
+      cameraName = getName(cameraName);  
+    }    
     if (devicePropertyName.equals("")) {
       // For plugins without device name property, the name is casted
       // as an index
