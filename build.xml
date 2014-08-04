@@ -44,6 +44,9 @@
   		<fileset dir="src" />
 	</copy>	
   	
+    <copy file="library.properties" tofile="dist/tmp/library.properties" />
+    
+    <delete file="dist/video.zip"/>
 	<zip destfile="dist/video.zip"
   		basedir="dist/tmp"
   		excludes="**/.DS_Store"
