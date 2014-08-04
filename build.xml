@@ -28,4 +28,29 @@
   <target name="build" depends="compile" description="Build video library">
     <jar basedir="bin" destfile="library/video.jar" />
   </target>
+  
+  <target name="dist" depends="build" description="Creates distribution package">
+    <mkdir dir="dist/tmp" />
+    
+  	<copy todir="dist/tmp/library">
+  		<fileset dir="library" />
+	</copy>
+    
+  	<copy todir="dist/tmp/examples">
+  		<fileset dir="examples" />
+	</copy>
+
+    <copy todir="dist/tmp/src">
+  		<fileset dir="src" />
+	</copy>	
+  	
+	<zip destfile="dist/video.zip"
+  		basedir="dist/tmp"
+  		excludes="**/.DS_Store"
+	/>	
+	
+    <copy file="library.properties" tofile="dist/video.txt" />	
+	
+	<delete dir="dist/tmp" />
+  </target>
 </project>
