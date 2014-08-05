@@ -30,28 +30,53 @@
   </target>
   
   <target name="dist" depends="build" description="Creates distribution package">
-    <mkdir dir="dist/tmp" />
+    <mkdir dir="dist/tmp/video" />
     
-  	<copy todir="dist/tmp/library">
+   	<!-- copy library files (jar and gstreamer natives) -->
+  	<copy todir="dist/tmp/video/library">
   		<fileset dir="library" />
 	</copy>
     
-  	<copy todir="dist/tmp/examples">
+  	<!-- copy examples -->
+  	<copy todir="dist/tmp/video/examples">
   		<fileset dir="examples" />
 	</copy>
 
-    <copy todir="dist/tmp/src">
+  	<!-- copy source -->
+    <copy todir="dist/tmp/video/src">
   		<fileset dir="src" />
 	</copy>	
   	
-    <copy file="library.properties" tofile="dist/tmp/library.properties" />
+    <!-- copy properties -->
+    <copy file="library.properties" tofile="dist/tmp/video/library.properties" /> 
     
+    <!-- create the java reference of the library -->
+    <mkdir dir="dist/tmp/video/reference" />	
+	<javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-14" 
+			classpath="../processing/core/library/core.jar;library/gstreamer-java.jar;library/jna.jar;bin" 
+			destdir="dist/tmp/video/reference"
+			verbose="false" 
+			stylesheetfile="resources/stylesheet.css" 
+			doctitle="Javadocs: Video" 
+			public="true" version="false" 
+			windowtitle="Javadocs: Video"> 			
+ 		<link href="http://java.sun.com/javase/6/docs/api/" />
+		<link href="http://processing.googlecode.com/svn/trunk/processing/build/javadoc/core/" />
+		<taglet name="ExampleTaglet" path="resources/code" />
+ 		<fileset dir="dist/tmp/video/src" defaultexcludes="yes">
+		<!-- add packages to be added to reference. -->
+			<include name="**/*"/>
+		</fileset>
+	</javadoc>    
+        
+    <!-- create zip package -->
     <delete file="dist/video.zip"/>
 	<zip destfile="dist/video.zip"
   		basedir="dist/tmp"
   		excludes="**/.DS_Store"
 	/>	
 	
+	<!-- copy properties to use by download manager -->
     <copy file="library.properties" tofile="dist/video.txt" />	
 	
 	<delete dir="dist/tmp" />
