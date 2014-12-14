@@ -11,7 +11,6 @@ import processing.video.*;
 
 Movie mov;
 int newFrame = 0;
-int movFrameRate = 30;
 
 void setup() {
   size(640, 360);
@@ -20,7 +19,7 @@ void setup() {
   // in play mode is needed so at least one frame is read
   // and we can get duration, size and other information from
   // the video stream. 
-  mov = new Movie(this, "transit.mov");
+  mov = new Movie(this, "transit.mov");  
   
   // Pausing the video at the first frame. 
   mov.play();
@@ -58,7 +57,7 @@ void setFrame(int n) {
   mov.play();
     
   // The duration of a single frame:
-  float frameDuration = 1.0 / movFrameRate;
+  float frameDuration = 1.0 / mov.frameRate;
     
   // We move to the middle of the frame by adding 0.5:
   float where = (n + 0.5) * frameDuration; 
@@ -74,6 +73,5 @@ void setFrame(int n) {
 }  
 
 int getLength() {
-  return int(mov.duration() * movFrameRate);
-}  
-
+  return int(mov.duration() * mov.frameRate);
+}
