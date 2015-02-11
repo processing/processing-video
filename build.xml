@@ -21,7 +21,7 @@
 	   classpath="../processing/core/library/core.jar; library/gstreamer-java.jar; library/jna.jar"
 	   nowarn="true"
 	   compiler="org.eclipse.jdt.core.JDTCompilerAdapter">
-      <compilerclasspath path="../processing/java/mode/ecj.jar" />
+      <compilerclasspath path="../processing/java/mode/org.eclipse.jdt.core.jar;../processing/java/mode/jdtCompilerAdapter.jar" />
     </javac>
   </target>
   
