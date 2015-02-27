@@ -390,7 +390,7 @@ public class Capture extends PImage implements PConstants {
       }
 
       if (firstFrame) {
-        super.init(bufWidth, bufHeight, ARGB);
+        super.init(bufWidth, bufHeight, ARGB, 1);
         firstFrame = false;
       }
 
@@ -419,7 +419,7 @@ public class Capture extends PImage implements PConstants {
       }
 
       if (firstFrame) {
-        super.init(bufWidth, bufHeight, RGB);
+        super.init(bufWidth, bufHeight, RGB, 1);
         firstFrame = false;
       }
 
