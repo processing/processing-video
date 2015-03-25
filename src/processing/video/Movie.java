@@ -882,7 +882,7 @@ public class Movie extends PImage implements PConstants {
    *
    * @return int
    */
-  protected int getSourceHeight() {
+  public int getSourceHeight() {
     Dimension dim = playbin.getVideoSize();
     if (dim != null) {
       return dim.height;
@@ -898,7 +898,7 @@ public class Movie extends PImage implements PConstants {
    *
    * @return float
    */
-  protected float getSourceFrameRate() {
+  public float getSourceFrameRate() {
     return (float)playbin.getVideoSinkFrameRate();
   }
 
@@ -909,7 +909,7 @@ public class Movie extends PImage implements PConstants {
    *
    * @return int
    */
-  protected int getSourceWidth() {
+  public int getSourceWidth() {
     Dimension dim = playbin.getVideoSize();
     if (dim != null) {
       return dim.width;
