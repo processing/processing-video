@@ -850,6 +850,24 @@ public class Movie extends PImage implements PConstants {
       }
     }
   }
+  
+  
+  /**
+   * Allows registration of End-of-Stream events, called when the movie is finished streaming
+   * Uses a Bus.EOS anonymous inner class as input. The inner class should contain an endOfStream method.
+   * 
+   * Example of a call of this function
+   * registerEOSEvent(new Bus.EOS() {
+   *  public void endOfStream(GstObject element) {
+   *    System.out.println("stream over");
+   *  });
+   *}
+   */
+  public void registerEOSEvent(final Bus.EOS listener) {
+    Bus bus = playbin.getBus();
+    bus.connect(listener);
+  }
+  
 
   protected void eosEvent() {
     if (repeat) {
@@ -877,6 +895,22 @@ public class Movie extends PImage implements PConstants {
 
 
   /**
+   * Get the width of the source video. Note: calling this method repeatedly
+   * can slow down playback performance.
+   *
+   * @return int
+   */
+  public int getSourceWidth() {
+    Dimension dim = playbin.getVideoSize();
+    if (dim != null) {
+      return dim.width;
+    } else {
+      return 0;
+    }
+  }
+  
+  
+  /**
    * Get the height of the source video. Note: calling this method repeatedly
    * can slow down playback performance.
    *
@@ -902,20 +936,19 @@ public class Movie extends PImage implements PConstants {
     return (float)playbin.getVideoSinkFrameRate();
   }
 
-
-  /**
-   * Get the width of the source video. Note: calling this method repeatedly
-   * can slow down playback performance.
-   *
-   * @return int
-   */
-  public int getSourceWidth() {
-    Dimension dim = playbin.getVideoSize();
-    if (dim != null) {
-      return dim.width;
-    } else {
-      return 0;
-    }
+  
+  public boolean isPlaying() {
+    return playing;
+  }
+  
+  
+  public boolean isPaused() {
+    return paused;
+  }
+  
+  
+  public boolean isRepeating() {
+    return repeating;
   }
 
 
