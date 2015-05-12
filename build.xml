@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <project name="Processing Video Library" default="build">
   
+  <property file="./build.properties" />
+
   <target name="clean" description="Clean the build directories">
     <delete dir="bin" />
     <delete file="library/video.jar" />
@@ -8,9 +10,9 @@
   
   <target name="compile" description="Compile sources">
     <condition property="core-built">
-      <available file="../processing/core/library/core.jar" />
+      <available file="${core.classpath.location}/core.jar" />
     </condition>
-    <fail unless="core-built" message="Please build the core library first and make sure it sits in ../processing/core/library/core.jar" />
+    <fail unless="core-built" message="Please build the core library first and make sure it sits in ${core.classpath.location}/core.jar" />
 
     <mkdir dir="bin" />
     <javac source="1.6"
@@ -18,16 +20,17 @@
 	   srcdir="src" destdir="bin" 
 	   encoding="UTF-8"
 	   includeAntRuntime="false"
-	   classpath="../processing/core/library/core.jar; library/gstreamer-java.jar; library/jna.jar"
+	   classpath="${core.classpath.location}/core.jar; library/gstreamer-java.jar; library/jna.jar"
 	   nowarn="true"
 	   compiler="org.eclipse.jdt.core.JDTCompilerAdapter">
-      <compilerclasspath path="../processing/java/mode/org.eclipse.jdt.core.jar; 
-                               ../processing/java/mode/jdtCompilerAdapter.jar" />
+      <compilerclasspath path="${compiler.classpath.location}/org.eclipse.jdt.core.jar; 
+                               ${compiler.classpath.location}/jdtCompilerAdapter.jar" />
     </javac>
   </target>
   
   <target name="build" depends="compile" description="Build video library">
     <jar basedir="bin" destfile="library/video.jar" />
+    <delete dir="bin" />
   </target>
   
   <target name="dist" depends="build" description="Creates distribution package">
@@ -36,25 +39,25 @@
    	<!-- copy library files (jar and gstreamer natives) -->
   	<copy todir="dist/tmp/video/library">
   		<fileset dir="library" />
-	</copy>
+	  </copy>
     
   	<!-- copy examples -->
   	<copy todir="dist/tmp/video/examples">
   		<fileset dir="examples" />
-	</copy>
+	  </copy>
 
   	<!-- copy source -->
     <copy todir="dist/tmp/video/src">
   		<fileset dir="src" />
-	</copy>	
+	  </copy>	
   	
     <!-- copy properties -->
     <copy file="library.properties" tofile="dist/tmp/video/library.properties" /> 
     
     <!-- create the java reference of the library -->
     <mkdir dir="dist/tmp/video/reference" />	
-	<javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-14" 
-			classpath="../processing/core/library/core.jar;library/gstreamer-java.jar;library/jna.jar;bin" 
+	  <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-14" 
+			classpath="${core.classpath.location}/core.jar;library/gstreamer-java.jar;library/jna.jar;bin" 
 			destdir="dist/tmp/video/reference"
 			verbose="false" 
 			stylesheetfile="resources/stylesheet.css" 
@@ -68,18 +71,18 @@
 		<!-- add packages to be added to reference. -->
 			<include name="**/*"/>
 		</fileset>
-	</javadoc>    
+	  </javadoc>    
         
     <!-- create zip package -->
     <delete file="dist/video.zip"/>
-	<zip destfile="dist/video.zip"
+	  <zip destfile="dist/video.zip"
   		basedir="dist/tmp"
   		excludes="**/.DS_Store"
-	/>	
+	  />	
 	
-	<!-- copy properties to use by download manager -->
+	  <!-- copy properties to use by download manager -->
     <copy file="library.properties" tofile="dist/video.txt" />	
 	
-	<delete dir="dist/tmp" />
+	  <delete dir="dist/tmp" />
   </target>
 </project>
