@@ -616,15 +616,15 @@ public class Movie extends PImage implements PConstants {
     return super.get(x, y);
   }
 
-  public boolean getPlaying(){
+  public boolean isPlaying(){
     return playing;
   }
 
-  public boolean getPaused(){
+  public boolean isPaused(){
     return paused;
   }
 
-  public boolean getRepeat(){
+  public boolean isRepeating(){
     return repeat;
   }
   
