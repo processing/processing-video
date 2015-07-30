@@ -40,7 +40,7 @@ void draw() {
   if (cam.available() == true) {
     cam.read();
   }
-  image(cam, 0, 0);
+  image(cam, 0, 0, width, height);
   // The following does the same as the above image() line, but 
   // is faster when just drawing the image without any additional 
   // resizing, transformations, or tint.
