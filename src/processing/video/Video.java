@@ -100,7 +100,7 @@ public class Video implements PConstants {
         gstreamerPluginPath = pluginPath;
       }
     } else {
-      // Paths are build automatically from the curren location of the video
+      // Paths are build automatically from the current location of the video
       // library.
       if (PApplet.platform == LINUX) {    
         buildLinuxPaths();
