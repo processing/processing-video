@@ -162,6 +162,10 @@ public class Video implements PConstants {
       System.out.println("Your system's LD_LIBRARY_PATH environment variable " +
         "is not set, limiting the search for the video libraries to /usr/lib " +
         "and /lib.");
+      // temporary hack for testing on Raspbian
+      if (System.getProperty("os.arch").equals("arm")) {
+        gstreamerLibPath = "/opt/vc/lib:/usr/local/lib:/lib/arm-linux-gnueabihf:/usr/lib/arm-linux-gnueabihf";
+      }
     } else {
       gstreamerLibPath = ldPath;
     }
