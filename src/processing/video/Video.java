@@ -155,20 +155,11 @@ public class Video implements PConstants {
   
   
   static protected void buildLinuxPaths() {
-    // looking pretty dire, make sure at least LD_LIBRARY_PATH is set
-    // see https://github.com/twall/jna/issues/477
-    String ldPath = System.getenv("LD_LIBRARY_PATH");
-    if (ldPath == null || ldPath.length() == 0) {
-      System.out.println("Your system's LD_LIBRARY_PATH environment variable " +
-        "is not set, limiting the search for the video libraries to /usr/lib " +
-        "and /lib.");
-      // temporary hack for testing on Raspbian
-      if (System.getProperty("os.arch").equals("arm")) {
-        gstreamerLibPath = "/opt/vc/lib:/usr/local/lib:/lib/arm-linux-gnueabihf:/usr/lib/arm-linux-gnueabihf";
-      }
-    } else {
-      gstreamerLibPath = ldPath;
-    }
+    // the version of the JNA library bundled automatically tries
+    // all library paths known to the host system's ldconfig
+    // so we'd even catch locations like /usr/local/lib etc
+    // PL for upstream: https://github.com/twall/jna/pull/478
+    gstreamerLibPath = "";
     gstreamerPluginPath = "";
   }
 
