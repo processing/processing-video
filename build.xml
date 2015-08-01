@@ -21,8 +21,7 @@
 	   encoding="UTF-8"
 	   includeAntRuntime="false"
 	   classpath="${core.classpath.location}/core.jar; library/gstreamer-java.jar; library/jna.jar"
-	   nowarn="true"
-	   compiler="org.eclipse.jdt.core.JDTCompilerAdapter">
+	   nowarn="true">
       <compilerclasspath path="${compiler.classpath.location}/org.eclipse.jdt.core.jar; 
                                ${compiler.classpath.location}/jdtCompilerAdapter.jar" />
     </javac>
