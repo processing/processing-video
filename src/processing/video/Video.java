@@ -114,6 +114,8 @@ public class Video implements PConstants {
     if (!gstreamerLibPath.equals("")) {
       System.setProperty("jna.library.path", gstreamerLibPath);
     }
+    // outputs the paths JNA is trying
+    //System.setProperty("jna.debug_load", "true");
 
     if (PApplet.platform == WINDOWS) {
       LibraryLoader loader = LibraryLoader.getInstance();
@@ -153,7 +155,16 @@ public class Video implements PConstants {
   
   
   static protected void buildLinuxPaths() {
-    gstreamerLibPath = "";
+    // looking pretty dire, make sure at least LD_LIBRARY_PATH is set
+    // see https://github.com/twall/jna/issues/477
+    String ldPath = System.getenv("LD_LIBRARY_PATH");
+    if (ldPath == null || ldPath.length() == 0) {
+      System.out.println("Your system's LD_LIBRARY_PATH environment variable " +
+        "is not set, limiting the search for the video libraries to /usr/lib " +
+        "and /lib.");
+    } else {
+      gstreamerLibPath = ldPath;
+    }
     gstreamerPluginPath = "";
   }
 
