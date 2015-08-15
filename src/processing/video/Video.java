@@ -100,7 +100,7 @@ public class Video implements PConstants {
         gstreamerPluginPath = pluginPath;
       }
     } else {
-      // Paths are build automatically from the curren location of the video
+      // Paths are build automatically from the current location of the video
       // library.
       if (PApplet.platform == LINUX) {    
         buildLinuxPaths();
@@ -114,6 +114,8 @@ public class Video implements PConstants {
     if (!gstreamerLibPath.equals("")) {
       System.setProperty("jna.library.path", gstreamerLibPath);
     }
+    // outputs the paths JNA is trying
+    //System.setProperty("jna.debug_load", "true");
 
     if (PApplet.platform == WINDOWS) {
       LibraryLoader loader = LibraryLoader.getInstance();
@@ -153,6 +155,10 @@ public class Video implements PConstants {
   
   
   static protected void buildLinuxPaths() {
+    // the version of the JNA library bundled automatically tries
+    // all library paths known to the host system's ldconfig
+    // so we'd even catch locations like /usr/local/lib etc
+    // PR for upstream: https://github.com/twall/jna/pull/478
     gstreamerLibPath = "";
     gstreamerPluginPath = "";
   }
