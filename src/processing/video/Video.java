@@ -23,7 +23,7 @@
 
 package processing.video;
 
-import org.gstreamer.*;
+import org.freedesktop.gstreamer.*;
 import processing.core.PApplet;
 import processing.core.PConstants;
 
@@ -133,15 +133,15 @@ public class Video implements PConstants {
 
   
   static protected void addPlugins() {
-    if (!gstreamerPluginPath.equals("")) {
-      Registry reg = Registry.getDefault();
-      boolean res;
-      res = reg.scanPath(gstreamerPluginPath);
-      if (!res) {
-        System.err.println("Cannot load GStreamer plugins from " + 
-                           gstreamerPluginPath);
-      }
-    }       
+//    if (!gstreamerPluginPath.equals("")) {
+//      Registry reg = Registry.getDefault();
+//      boolean res;
+//      res = reg.scanPath(gstreamerPluginPath);
+//      if (!res) {
+//        System.err.println("Cannot load GStreamer plugins from " + 
+//                           gstreamerPluginPath);
+//      }
+//    }       
   }
   
   

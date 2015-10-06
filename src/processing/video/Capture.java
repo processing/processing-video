@@ -31,11 +31,11 @@ import java.util.ArrayList;
 import java.io.File;
 import java.lang.reflect.*;
 
-import org.gstreamer.*;
-import org.gstreamer.Buffer;
-import org.gstreamer.elements.*;
-import org.gstreamer.interfaces.PropertyProbe;
-import org.gstreamer.interfaces.Property;
+import org.freedesktop.gstreamer.*;
+import org.freedesktop.gstreamer.Buffer;
+import org.freedesktop.gstreamer.elements.*;
+import org.freedesktop.gstreamer.interfaces.PropertyProbe;
+import org.freedesktop.gstreamer.interfaces.Property;
 
 /**
    * ( begin auto-generated from Capture.xml )
@@ -98,7 +98,7 @@ public class Capture extends PImage implements PConstants {
   protected boolean pipelineReady;
   protected boolean newFrame;
 
-  protected RGBDataAppSink rgbSink = null;
+  protected AppSink rgbSink = null;
   protected int[] copyPixels = null;
 
   protected boolean firstFrame = true;
@@ -115,7 +115,7 @@ public class Capture extends PImage implements PConstants {
   protected Method sinkGetMethod;
   protected String copyMask;
   protected Buffer natBuffer = null;
-  protected BufferDataAppSink natSink = null;
+  //protected BufferDataAppSink natSink = null;
 
 
   public Capture(PApplet parent) {
@@ -265,17 +265,17 @@ public class Capture extends PImage implements PConstants {
 
       copyPixels = null;
       if (rgbSink != null) {
-        rgbSink.removeListener();
+//        rgbSink.removeListener();
         rgbSink.dispose();
         rgbSink = null;
       }
 
       natBuffer = null;
-      if (natSink != null) {
-        natSink.removeListener();
-        natSink.dispose();
-        natSink = null;
-      }
+//      if (natSink != null) {
+//        natSink.removeListener();
+//        natSink.dispose();
+//        natSink = null;
+//      }
 
       pipeline.dispose();
       pipeline = null;
@@ -382,7 +382,26 @@ public class Capture extends PImage implements PConstants {
       // which is already playing since we are in read().
       frameRate = getSourceFrameRate();
     }
+//    if (volume < 0) {
+//      // Idem for volume
+//      volume = (float)playbin.getVolume();
+//    }
+  
+    if (copyPixels == null) {
+      return;
+    }
 
+    if (firstFrame) {
+      super.init(bufWidth, bufHeight, RGB, 1);
+      firstFrame = false;
+    }
+
+    int[] temp = pixels;
+    pixels = copyPixels;
+    updatePixels();
+    copyPixels = temp;    
+    
+/*
     if (useBufferSink) { // The native buffer from gstreamer is copied to the buffer sink.
       outdatedPixels = true;
       if (natBuffer == null) {
@@ -406,8 +425,7 @@ public class Capture extends PImage implements PConstants {
       ByteBuffer byteBuffer = natBuffer.getByteBuffer();
 
       try {
-        sinkCopyMethod.invoke(bufferSink,
-          new Object[] { natBuffer, byteBuffer, bufWidth, bufHeight });
+        sinkCopyMethod.invoke(bufferSink, new Object[] { natBuffer, byteBuffer, bufWidth, bufHeight });
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -428,15 +446,17 @@ public class Capture extends PImage implements PConstants {
       updatePixels();
       copyPixels = temp;
     }
+    */
 
     available = false;
     newFrame = true;
   }
 
-
   public synchronized void loadPixels() {
     super.loadPixels();
+    
     if (useBufferSink) {
+      /*
       if (natBuffer != null) {
         // This means that the OpenGL texture hasn't been created so far (the
         // video frame not drawn using image()), but the user wants to use the
@@ -444,7 +464,7 @@ public class Capture extends PImage implements PConstants {
         IntBuffer buf = natBuffer.getByteBuffer().asIntBuffer();
         buf.rewind();
         buf.get(pixels);
-        Video.convertToARGB(pixels, width, height);
+        Video.convertToARGB(pixels, width, height);        
       } else if (sinkGetMethod != null) {
         try {
           // sinkGetMethod will copy the latest buffer to the pixels array,
@@ -453,12 +473,23 @@ public class Capture extends PImage implements PConstants {
           sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
         } catch (Exception e) {
           e.printStackTrace();
-        }
+        }        
       }
-
+      */
+      
+      try {
+        // sinkGetMethod will copy the latest buffer to the pixels array,
+        // and the pixels will be copied to the texture when the OpenGL
+        // renderer needs to draw it.
+        sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
+      } catch (Exception e) {
+        e.printStackTrace();
+      }    
+      
       outdatedPixels = false;
     }
   }
+
 
 
   public int get(int x, int y) {
@@ -577,6 +608,7 @@ public class Capture extends PImage implements PConstants {
   static protected ArrayList<String> listResolutions(String sourceName,
                                                      String propertyName,
                                                      Object propertyValue) {
+    /*
     // Creating temporary pipeline so that we can query
     // the resolutions supported by the device.
     Pipeline testPipeline = new Pipeline("test");
@@ -610,6 +642,8 @@ public class Capture extends PImage implements PConstants {
     }
 
     testPipeline.dispose();
+    */
+    ArrayList<String> resolutions = new ArrayList<String>();
     return resolutions;
   }
 
@@ -927,20 +961,20 @@ public class Capture extends PImage implements PConstants {
 
       String caps = whStr + fpsStr + ", " + copyMask;
 
-      natSink = new BufferDataAppSink("nat", caps,
-          new BufferDataAppSink.Listener() {
-            public void bufferFrame(int w, int h, Buffer buffer) {
-              invokeEvent(w, h, buffer);
-            }
-          });
-
-      natSink.setAutoDisposeBuffer(false);
+//      natSink = new BufferDataAppSink("nat", caps,
+//          new BufferDataAppSink.Listener() {
+//            public void bufferFrame(int w, int h, Buffer buffer) {
+//              invokeEvent(w, h, buffer);
+//            }
+//          });
+//
+//      natSink.setAutoDisposeBuffer(false);
 
       // No need for rgbSink.dispose(), because the addMany() doesn't increment the
       // refcount of the videoSink object.
 
-      pipeline.addMany(sourceElement, natSink);
-      Element.linkMany(sourceElement, natSink);
+//      pipeline.addMany(sourceElement, natSink);
+//      Element.linkMany(sourceElement, natSink);
 
     } else {
       Element conv = ElementFactory.make("ffmpegcolorspace", "ColorConverter");
@@ -949,16 +983,16 @@ public class Capture extends PImage implements PConstants {
       videofilter.setCaps(new Caps("video/x-raw-rgb, width=" + reqWidth +
                                    ", height=" + reqHeight +
                                    ", bpp=32, depth=24" + fpsStr));
-
-      rgbSink = new RGBDataAppSink("rgb",
-          new RGBDataAppSink.Listener() {
-            public void rgbFrame(int w, int h, IntBuffer buffer) {
-              invokeEvent(w, h, buffer);
-            }
-          });
-
-      // Setting direct buffer passing in the video sink.
-      rgbSink.setPassDirectBuffer(Video.passDirectBuffer);
+//
+//      rgbSink = new RGBDataAppSink("rgb",
+//          new RGBDataAppSink.Listener() {
+//            public void rgbFrame(int w, int h, IntBuffer buffer) {
+//              invokeEvent(w, h, buffer);
+//            }
+//          });
+//
+//      // Setting direct buffer passing in the video sink.
+//      rgbSink.setPassDirectBuffer(Video.passDirectBuffer);
 
       // No need for rgbSink.dispose(), because the addMany() doesn't increment
       // the refcount of the videoSink object.
@@ -1064,14 +1098,14 @@ public class Capture extends PImage implements PConstants {
 
 
   protected float getSourceFrameRate() {
-    for (Element sink : pipeline.getSinks()) {
-      for (Pad pad : sink.getPads()) {
-        Fraction frameRate = org.gstreamer.Video.getVideoFrameRate(pad);
-        if (frameRate != null) {
-          return (float)frameRate.toDouble();
-        }
-      }
-    }
+//    for (Element sink : pipeline.getSinks()) {
+//      for (Pad pad : sink.getPads()) {
+//        Fraction frameRate = org.gstreamer.Video.getVideoFrameRate(pad);
+//        if (frameRate != null) {
+//          return (float)frameRate.toDouble();
+//        }
+//      }
+//    }
     return 0;
   }
 

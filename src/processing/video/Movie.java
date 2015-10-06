@@ -31,11 +31,13 @@ import java.io.*;
 import java.net.URI;
 import java.nio.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.lang.reflect.*;
 
-import org.gstreamer.*;
-import org.gstreamer.Buffer;
-import org.gstreamer.elements.*;
+import org.freedesktop.gstreamer.*;
+import org.freedesktop.gstreamer.Buffer;
+import org.freedesktop.gstreamer.elements.*;
 
 
 /**
@@ -54,7 +56,7 @@ public class Movie extends PImage implements PConstants {
   public static String[] supportedProtocols = { "http" };
   public float frameRate;
   public String filename;
-  public PlayBin2 playbin;
+  public PlayBin playbin;
 
   protected boolean playing = false;
   protected boolean paused = false;
@@ -72,7 +74,7 @@ public class Movie extends PImage implements PConstants {
   protected boolean sinkReady;
   protected boolean newFrame;
 
-  protected RGBDataAppSink rgbSink = null;
+  protected AppSink rgbSink = null;
   protected int[] copyPixels = null;
 
   protected boolean firstFrame = true;
@@ -87,8 +89,12 @@ public class Movie extends PImage implements PConstants {
   protected Method sinkGetMethod;  
   protected String copyMask;
   protected Buffer natBuffer = null;
-  protected BufferDataAppSink natSink = null;
+//  protected BufferDataAppSink natSink = null;
 
+  NewSampleListener newSampleListener;
+//  NewPrerollListener newPrerollListener;
+  private final Lock bufferLock = new ReentrantLock();
+  
 
   /**
    * Creates an instance of GSMovie loading the movie from filename.
@@ -109,33 +115,42 @@ public class Movie extends PImage implements PConstants {
    */
   public void dispose() {
     if (playbin != null) {
-      try {
-        if (playbin.isPlaying()) {
-          playbin.stop();
-          playbin.getState();
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
+//      try {
+//        if (playbin.isPlaying()) {
+//          playbin.stop();
+//          playbin.getState();
+//        }
+//      } catch (Exception e) {
+//        e.printStackTrace();
+//      }
 
       pixels = null;
 
-      copyPixels = null;
-      if (rgbSink != null) {
-        rgbSink.removeListener();
-        rgbSink.dispose();
-        rgbSink = null;
-      }
-
-      natBuffer = null;
-      if (natSink != null) {
-        natSink.removeListener();
-        natSink.dispose();
-        natSink = null;
-      }
-
+      rgbSink.disconnect(newSampleListener);
+//      sink.disconnect(newPrerollListener);
+      rgbSink.dispose();
+      playbin.setState(org.freedesktop.gstreamer.State.NULL);
+      playbin.getState();
+      playbin.getBus().dispose();
       playbin.dispose();
-      playbin = null;
+      
+      
+//      copyPixels = null;
+//      if (rgbSink != null) {
+//        rgbSink.removeListener();
+//        rgbSink.dispose();
+//        rgbSink = null;
+//      }
+      
+//      natBuffer = null;
+//      if (natSink != null) {
+//        natSink.removeListener();
+//        natSink.dispose();
+//        natSink = null;
+//      }
+
+//      playbin.dispose();
+//      playbin = null;
       
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
@@ -511,16 +526,31 @@ public class Movie extends PImage implements PConstants {
    * @brief Reads the current frame
    */
   public synchronized void read() {
-    if (frameRate < 0) {
-      // Framerate not set yet, so we obtain from stream,
-      // which is already playing since we are in read().
-      frameRate = getSourceFrameRate();
-    }
-    if (volume < 0) {
-      // Idem for volume
-      volume = (float)playbin.getVolume();
+//    if (frameRate < 0) {
+//      // Framerate not set yet, so we obtain from stream,
+//      // which is already playing since we are in read().
+//      frameRate = getSourceFrameRate();
+//    }
+//    if (volume < 0) {
+//      // Idem for volume
+//      volume = (float)playbin.getVolume();
+//    }
+//  
+//    if (copyPixels == null) {
+//      return;
+//    }
+
+    if (firstFrame) {
+      super.init(bufWidth, bufHeight, RGB, 1);
+      firstFrame = false;
     }
 
+    int[] temp = pixels;
+    pixels = copyPixels;
+    updatePixels();
+    copyPixels = temp;    
+    
+/*
     if (useBufferSink) { // The native buffer from gstreamer is copied to the buffer sink.
       outdatedPixels = true;
       if (natBuffer == null) {
@@ -565,6 +595,7 @@ public class Movie extends PImage implements PConstants {
       updatePixels();
       copyPixels = temp;
     }
+    */
 
     available = false;
     newFrame = true;
@@ -586,7 +617,9 @@ public class Movie extends PImage implements PConstants {
 
   public synchronized void loadPixels() {
     super.loadPixels();
-    if (useBufferSink) {      
+    
+    if (useBufferSink) {
+      /*
       if (natBuffer != null) {
         // This means that the OpenGL texture hasn't been created so far (the
         // video frame not drawn using image()), but the user wants to use the
@@ -605,6 +638,16 @@ public class Movie extends PImage implements PConstants {
           e.printStackTrace();
         }        
       }
+      */
+      
+      try {
+        // sinkGetMethod will copy the latest buffer to the pixels array,
+        // and the pixels will be copied to the texture when the OpenGL
+        // renderer needs to draw it.
+        sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
+      } catch (Exception e) {
+        e.printStackTrace();
+      }    
       
       outdatedPixels = false;
     }
@@ -647,7 +690,7 @@ public class Movie extends PImage implements PConstants {
         // which is less fun, so this will crap out.
         file = new File(parent.dataPath(filename));
         if (file.exists()) {
-          playbin = new PlayBin2("Movie Player");
+          playbin = new PlayBin("Movie Player");
           playbin.setInputFile(file);
         }
       } catch (Exception e) {
@@ -660,7 +703,7 @@ public class Movie extends PImage implements PConstants {
         try {
           file = new File(filename);
           if (file.exists()) {
-            playbin = new PlayBin2("Movie Player");
+            playbin = new PlayBin("Movie Player");
             playbin.setInputFile(file);
           }
         } catch (Exception e) {
@@ -673,7 +716,7 @@ public class Movie extends PImage implements PConstants {
         for (int i = 0; i < supportedProtocols.length; i++) {
           if (filename.startsWith(supportedProtocols[i] + "://")) {
             try {
-              playbin = new PlayBin2("Movie Player");
+              playbin = new PlayBin("Movie Player");
               playbin.setURI(URI.create(filename));
               break;
             } catch (Exception e) {
@@ -740,59 +783,55 @@ public class Movie extends PImage implements PConstants {
 
 
   protected void initSink() {
-    if (bufferSink != null || (Video.useGLBufferSink && parent.g.isGL())) {
-      useBufferSink = true;
-
-      if (bufferSink != null) {
-        getSinkMethods();
-      }
-
-      if (copyMask == null || copyMask.equals("")) {
-        initCopyMask();
-      }
-
-      natSink = new BufferDataAppSink("nat", copyMask,
-          new BufferDataAppSink.Listener() {
-            public void bufferFrame(int w, int h, Buffer buffer) {
-              invokeEvent(w, h, buffer);
-            }
-          });
-
-      natSink.setAutoDisposeBuffer(false);
-      playbin.setVideoSink(natSink);
-      // The setVideoSink() method sets the videoSink as a property of the
-      // PlayBin, which increments the refcount of the videoSink element.
-      // Disposing here once to decrement the refcount.
-      natSink.dispose();
+    rgbSink = new AppSink("sink");
+    rgbSink.set("emit-signals", true);
+    newSampleListener = new NewSampleListener();
+//    newPrerollListener = new NewPrerollListener();
+    rgbSink.connect(newSampleListener);
+//    rgbSink.connect(newPrerollListener);
+    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+      rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
     } else {
-      rgbSink = new RGBDataAppSink("rgb",
-        new RGBDataAppSink.Listener() {
-          public void rgbFrame(int w, int h, IntBuffer buffer) {
-            invokeEvent(w, h, buffer);
-          }
-        });
-
-      // Setting direct buffer passing in the video sink.
-      rgbSink.setPassDirectBuffer(Video.passDirectBuffer);
-      playbin.setVideoSink(rgbSink);
-      // The setVideoSink() method sets the videoSink as a property of the
-      // PlayBin, which increments the refcount of the videoSink element.
-      // Disposing here once to decrement the refcount.
-      rgbSink.dispose();
+      rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
     }
+    playbin.setVideoSink(rgbSink);
+    
+    makeBusConnections(playbin.getBus());
+    playbin.setState(org.freedesktop.gstreamer.State.READY);
 
-    // Creating bus to handle end-of-stream event.
-    Bus bus = playbin.getBus();
-    bus.connect(new Bus.EOS() {
-      public void endOfStream(GstObject element) {
-        eosEvent();
-      }
-    });
+    
+    
+
 
     sinkReady = true;
     newFrame = false;
   }
 
+  
+  private void makeBusConnections(Bus bus) {
+    bus.connect(new Bus.ERROR() {
+
+        public void errorMessage(GstObject arg0, int arg1, String arg2) {
+            System.err.println(arg0 + " : " + arg2);
+        }
+    });
+    bus.connect(new Bus.EOS() {
+
+        public void endOfStream(GstObject arg0) {
+            try {
+                if (repeat) {
+                  playbin.seek(0, TimeUnit.NANOSECONDS);
+                } else {
+                    stop();
+                }
+            } catch (Exception ex) {
+              ex.printStackTrace();
+            }
+        }
+    });
+  }
+
+  
 
   ////////////////////////////////////////////////////////////
 
@@ -1023,4 +1062,74 @@ public class Movie extends PImage implements PConstants {
       }
     }
   }
+  
+  private class NewSampleListener implements AppSink.NEW_SAMPLE {
+
+    @Override
+    public void newBuffer(AppSink sink) {
+      Sample sample = sink.pullSample();
+      Structure capsStruct = sample.getCaps().getStructure(0);
+      int w = capsStruct.getInteger("width");
+      int h = capsStruct.getInteger("height");
+      Buffer buffer = sample.getBuffer();
+      ByteBuffer bb = buffer.map(false);
+      if (bb != null) {
+        // If the EDT is still copying data from the buffer, just drop this frame
+        if (!bufferLock.tryLock()) {
+          return;
+        }
+        IntBuffer rgb = bb.asIntBuffer();
+        
+        available = true;
+        bufWidth = w;
+        bufHeight = h;        
+        System.out.println("got a frame " + w + " " + h + " " + playing);
+        if (copyPixels == null) {
+          copyPixels = new int[w * h];
+        }
+        
+        try {
+          rgb.get(copyPixels, 0, width * height);
+          if (playing) {
+            fireMovieEvent();
+          }          
+          
+        } finally {
+          bufferLock.unlock();
+        }        
+        
+        buffer.unmap();
+      }
+      sample.dispose();
+    }
+  }
+
+  /*
+  private class NewPrerollListener implements AppSink.NEW_PREROLL {
+    @Override
+    public void newPreroll(AppSink sink) {
+        surfaceLock.lock();
+        Sample sample = sink.pullPreroll();
+        Structure capsStruct = sample.getCaps().getStructure(0);
+        int width = capsStruct.getInteger("width");
+        int height = capsStruct.getInteger("height");
+        try {
+            if (surface == null || surface.getWidth() != width || surface.getHeight() != height) {
+                if (surface != null && surface.sample != null) {
+                    surface.sample.dispose();
+                }
+                surface = new GStreamerSurface(width, height);
+            } else {
+                if (surface.sample != null) {
+                    surface.sample.dispose();
+                }
+            }
+            surface.sample = sample;
+            surface.modCount++;
+        } finally {
+            surfaceLock.unlock();
+        }
+    }
+  }
+  */
 }
