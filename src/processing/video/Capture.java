@@ -37,6 +37,7 @@ import java.lang.reflect.*;
 
 import org.freedesktop.gstreamer.*;
 import org.freedesktop.gstreamer.Buffer;
+import org.freedesktop.gstreamer.device.DeviceMonitor;
 import org.freedesktop.gstreamer.elements.*;
 
 
@@ -684,8 +685,30 @@ public class Capture extends PImage implements PConstants {
 
     Video.init();
 
+    String filter = "video/x-raw,width=640,height=480";
+    Caps caps = new Caps(filter);
+    
+    DeviceMonitor monitor = DeviceMonitor.createNew();
+    monitor.addFilter("Video/Source", caps);
+    Bus bus = monitor.getBus();
+    System.out.println(monitor.getName());
+    System.out.println("monitor bus: "  +bus);
+    bus.connect(new Bus.MESSAGE() {
+      @Override
+      public void busMessage(Bus arg0, Message arg1) {
+        System.out.println("Message received"); 
+      }
+    });
+        
+    
+    
+        
+    
     bin = Bin.launch("autovideosrc ! videoconvert ! capsfilter caps=video/x-raw,width=640,height=480", true);
     pipe = new Pipeline(); 
+    
+
+  
     
     /*
     // first check to see if this can be read locally from a file.
@@ -742,7 +765,6 @@ public class Capture extends PImage implements PConstants {
 */
     
     
-    // we've got a valid movie! let's rock.
     try {
 //      this.filename = filename; // for error messages
 
@@ -1093,7 +1115,7 @@ public class Capture extends PImage implements PConstants {
         available = true;
         bufWidth = w;
         bufHeight = h;        
-        System.out.println("got a frame " + w + " " + h + " " + playing);
+//        System.out.println("got a frame " + w + " " + h + " " + playing);
         if (copyPixels == null) {
           copyPixels = new int[w * h];
         }
