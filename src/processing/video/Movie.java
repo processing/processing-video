@@ -1066,7 +1066,7 @@ public class Movie extends PImage implements PConstants {
   private class NewSampleListener implements AppSink.NEW_SAMPLE {
 
     @Override
-    public void newBuffer(AppSink sink) {
+    public FlowReturn newSample(AppSink sink) {
       Sample sample = sink.pullSample();
       Structure capsStruct = sample.getCaps().getStructure(0);
       int w = capsStruct.getInteger("width");
@@ -1076,7 +1076,7 @@ public class Movie extends PImage implements PConstants {
       if (bb != null) {
         // If the EDT is still copying data from the buffer, just drop this frame
         if (!bufferLock.tryLock()) {
-          return;
+          return null;
         }
         IntBuffer rgb = bb.asIntBuffer();
         
@@ -1101,6 +1101,7 @@ public class Movie extends PImage implements PConstants {
         buffer.unmap();
       }
       sample.dispose();
+      return null;
     }
   }
 

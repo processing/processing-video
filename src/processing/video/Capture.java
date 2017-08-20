@@ -102,7 +102,6 @@ public class Capture extends PImage implements PConstants {
    * Creates an instance of GSMovie loading the movie from filename.
    *
    * @param parent PApplet
-   * @param filename String
    */
   public Capture(PApplet parent) {
     super(0, 0, RGB);
@@ -1098,7 +1097,7 @@ public class Capture extends PImage implements PConstants {
   private class NewSampleListener implements AppSink.NEW_SAMPLE {
 
     @Override
-    public void newBuffer(AppSink sink) {
+    public FlowReturn newSample(AppSink sink) {
       Sample sample = sink.pullSample();
       Structure capsStruct = sample.getCaps().getStructure(0);
       int w = capsStruct.getInteger("width");
@@ -1108,7 +1107,7 @@ public class Capture extends PImage implements PConstants {
       if (bb != null) {
         // If the EDT is still copying data from the buffer, just drop this frame
         if (!bufferLock.tryLock()) {
-          return;
+          return null;
         }
         IntBuffer rgb = bb.asIntBuffer();
         
@@ -1133,7 +1132,9 @@ public class Capture extends PImage implements PConstants {
         buffer.unmap();
       }
       sample.dispose();
+      return null;
     }
+
   }
 
   /*
