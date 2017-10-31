@@ -242,9 +242,7 @@ public class Capture extends PImage implements PConstants {
    *
    * ( end auto-generated )
    *
-
    * @webref movie
-
    * @usage web_application
    * @param irate speed multiplier for movie playback
    * @brief Sets the relative playback speed
