@@ -709,8 +709,8 @@ public class Capture extends PImage implements PConstants {
     DeviceMonitor monitor = DeviceMonitor.createNew();
     monitor.addFilter("Video/Source", caps);
     Bus bus = monitor.getBus();
-    System.out.println(monitor.getName());
-    System.out.println("monitor bus: "  +bus);
+    //System.out.println(monitor.getName());
+    //System.out.println("monitor bus: "  +bus);
     bus.connect(new Bus.MESSAGE() {
       @Override
       public void busMessage(Bus arg0, Message arg1) {
