@@ -109,6 +109,17 @@ public class Capture extends PImage implements PConstants {
   }
 
   /**
+   *  Creates an instance of a capture device using a specific device name
+   *  @param parent PApplet, typically "this"
+   *  @param device device name
+   *  @see list()
+   */
+  public Capture(PApplet parent, String device) {
+    // attemt to use a default resoltution
+    this(parent, 640, 480);
+  }
+
+  /**
    *  Creates an instance of a capture device with the given width and height
    *  @param parent PApplet, typically "this"
    *  @param width requested width in pixels
@@ -1101,7 +1112,18 @@ public class Capture extends PImage implements PConstants {
       }
     }
   }
-  
+
+  /**
+   *  Returns a list of all capture devices
+   *  @return array of device names
+   */
+  static public String[] list() {
+    String[] out = new String[1];
+    out[0] = "dummy";
+    System.err.println("Device enumeration is currently not supported on your platform. This library will attempt to use the default capture device instead.");
+    return out;
+  }
+
   private class NewSampleListener implements AppSink.NEW_SAMPLE {
 
     @Override
