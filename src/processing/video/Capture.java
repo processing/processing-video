@@ -92,41 +92,51 @@ public class Capture extends PImage implements PConstants {
   protected String copyMask;
   protected Buffer natBuffer = null;
 //  protected BufferDataAppSink natSink = null;
+  protected String device;
 
   NewSampleListener newSampleListener;
 //  NewPrerollListener newPrerollListener;
   private final Lock bufferLock = new ReentrantLock();
-  
 
   /**
-   * Creates an instance of GSMovie loading the movie from filename.
-   *
-   * @param parent PApplet
+   *  Open the default capture device
+   *  @param parent PApplet, typically "this"
    */
   public Capture(PApplet parent) {
     // attemt to use a default resolution
-    this(parent, 640, 480);
+    this(parent, "0", 640, 480);
   }
 
   /**
-   *  Creates an instance of a capture device using a specific device name
+   *  Open a specific capture device
    *  @param parent PApplet, typically "this"
    *  @param device device name
    *  @see list()
    */
   public Capture(PApplet parent, String device) {
-    // attemt to use a default resoltution
-    this(parent, 640, 480);
+    // attemt to use a default resolution
+    this(parent, "0", 640, 480);
   }
 
   /**
-   *  Creates an instance of a capture device with the given width and height
+   *  Open the default capture device with a given resolution
    *  @param parent PApplet, typically "this"
-   *  @param width requested width in pixels
-   *  @param height requested height in pixels
+   *  @param width width in pixels
+   *  @param height height in pixels
    */
   public Capture(PApplet parent, int width, int height) {
+    this(parent, "0", width, height);
+  }
+
+  /**
+   *  Open a specific capture device with a given resolution
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
+   */
+  public Capture(PApplet parent, String device, int width, int height) {
     super(width, height, RGB);
+    this.device = device;
     initGStreamer(parent);
   }
 
@@ -717,12 +727,18 @@ public class Capture extends PImage implements PConstants {
         System.out.println("Message received"); 
       }
     });
-        
-    
-    
-        
-    // XXX: on macOS and Windows use autovideosrc, on Linux use the device probing above
-    bin = Bin.launch("autovideosrc ! videoscale ! videoconvert ! capsfilter caps=\"video/x-raw, width=" + width + ", height=" + height + "\"", true);
+
+
+    String srcElement;
+    if (PApplet.platform == MACOSX) {
+      srcElement = "avfvideosrc device-index=" + device;
+    } else {
+      // XXX
+      srcElement = "autovideosrc";
+    }
+
+
+    bin = Bin.launch(srcElement + " ! videoscale ! videoconvert ! capsfilter caps=\"video/x-raw, width=" + width + ", height=" + height + "\"", true);
     pipe = new Pipeline();
     
 
@@ -1119,7 +1135,7 @@ public class Capture extends PImage implements PConstants {
    */
   static public String[] list() {
     String[] out = new String[1];
-    out[0] = "dummy";
+    out[0] = "0";
     System.err.println("Device enumeration is currently not supported on your platform. This library will attempt to use the default capture device instead.");
     return out;
   }
