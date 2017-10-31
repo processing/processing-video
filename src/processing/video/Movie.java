@@ -1082,8 +1082,7 @@ public class Movie extends PImage implements PConstants {
         
         available = true;
         bufWidth = w;
-        bufHeight = h;        
-        System.out.println("got a frame " + w + " " + h + " " + playing);
+        bufHeight = h;
         if (copyPixels == null) {
           copyPixels = new int[w * h];
         }
