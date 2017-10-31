@@ -104,10 +104,20 @@ public class Capture extends PImage implements PConstants {
    * @param parent PApplet
    */
   public Capture(PApplet parent) {
-    super(0, 0, RGB);
-    initGStreamer(parent);
+    // attemt to use a default resolution
+    this(parent, 640, 480);
   }
 
+  /**
+   *  Creates an instance of a capture device with the given width and height
+   *  @param parent PApplet, typically "this"
+   *  @param width requested width in pixels
+   *  @param height requested height in pixels
+   */
+  public Capture(PApplet parent, int width, int height) {
+    super(width, height, RGB);
+    initGStreamer(parent);
+  }
 
   /**
    * Disposes all the native resources associated to this movie.
@@ -682,7 +692,7 @@ public class Capture extends PImage implements PConstants {
 
     Video.init();
 
-    String filter = "video/x-raw,width=640,height=480";
+    String filter = "video/x-raw, width=" + width + ", height=" + height;
     Caps caps = new Caps(filter);
     
     DeviceMonitor monitor = DeviceMonitor.createNew();
@@ -700,9 +710,9 @@ public class Capture extends PImage implements PConstants {
     
     
         
-    
-    bin = Bin.launch("autovideosrc ! videoconvert ! capsfilter caps=video/x-raw,width=640,height=480", true);
-    pipe = new Pipeline(); 
+    // XXX: on macOS and Windows use autovideosrc, on Linux use the device probing above
+    bin = Bin.launch("autovideosrc ! videoscale ! videoconvert ! capsfilter caps=\"video/x-raw, width=" + width + ", height=" + height + "\"", true);
+    pipe = new Pipeline();
     
 
   
