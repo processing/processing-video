@@ -104,7 +104,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent) {
     // attemt to use a default resolution
-    this(parent, "0", 640, 480);
+    this(parent, 640, 480, "0");
   }
 
   /**
@@ -115,7 +115,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent, String device) {
     // attemt to use a default resolution
-    this(parent, "0", 640, 480);
+    this(parent, 640, 480, "0");
   }
 
   /**
@@ -125,7 +125,19 @@ public class Capture extends PImage implements PConstants {
    *  @param height height in pixels
    */
   public Capture(PApplet parent, int width, int height) {
-    this(parent, "0", width, height);
+    this(parent, width, height, "0");
+  }
+
+  /**
+   *  Open the default capture device with a given resolution and framerate
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
+   *  @param fps frames per second
+   */
+  public Capture(PApplet parent, int width, int height, float fps) {
+    // XXX: handle rate
+    this(parent, width, height, "0");
   }
 
   /**
@@ -133,11 +145,27 @@ public class Capture extends PImage implements PConstants {
    *  @param parent PApplet, typically "this"
    *  @param width width in pixels
    *  @param height height in pixels
+   *  @param device device name
+   *  @see list()
    */
-  public Capture(PApplet parent, String device, int width, int height) {
+  public Capture(PApplet parent, int width, int height, String device) {
     super(width, height, RGB);
     this.device = device;
     initGStreamer(parent);
+  }
+
+  /**
+   *  Open a specific capture device with a given resolution and framerate
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
+   *  @param device device name
+   *  @param fps frames per second
+   *  @see list()
+   */
+  public Capture(PApplet parent, int width, int height, String device, float fps) {
+    // XXX: handle rate
+    this(parent, width, height, "0");
   }
 
   /**
