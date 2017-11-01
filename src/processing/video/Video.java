@@ -155,10 +155,8 @@ public class Video implements PConstants {
   
   
   static protected void buildLinuxPaths() {
-    // the version of the JNA library bundled automatically tries
-    // all library paths known to the host system's ldconfig
-    // so we'd even catch locations like /usr/local/lib etc
-    // PR for upstream: https://github.com/twall/jna/pull/478
+    // JNA automatically tries all library paths known to the host system's
+    // ldconfig, so we'd even catch locations like /usr/local/lib etc
     gstreamerLibPath = "";
     gstreamerPluginPath = "";
   }
