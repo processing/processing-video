@@ -54,7 +54,7 @@ import org.freedesktop.gstreamer.elements.*;
  */
 public class Movie extends PImage implements PConstants {
   public static String[] supportedProtocols = { "http" };
-  public float frameRate;
+  public float frameRate;     // XXX: seems to always be -1.0
   public String filename;
   public PlayBin playbin;
 
