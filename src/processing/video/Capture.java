@@ -746,6 +746,7 @@ public class Capture extends PImage implements PConstants {
     
     DeviceMonitor monitor = DeviceMonitor.createNew();
     monitor.addFilter("Video/Source", caps);
+    // XXX: use getDevices() instead
     Bus bus = monitor.getBus();
     //System.out.println(monitor.getName());
     //System.out.println("monitor bus: "  +bus);
