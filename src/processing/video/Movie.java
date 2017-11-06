@@ -54,7 +54,11 @@ import org.freedesktop.gstreamer.elements.*;
  */
 public class Movie extends PImage implements PConstants {
   public static String[] supportedProtocols = { "http" };
-  public float frameRate;     // XXX: seems to always be -1.0
+
+  protected float nativeFrameRate;    // the file's native fps
+  public float frameRate;             // the current playback fps
+  protected float rate;               // speed multiplier (1.0: frameRate = nativeFrameRate)
+
   public String filename;
   public PlayBin playbin;
 
@@ -62,7 +66,6 @@ public class Movie extends PImage implements PConstants {
   protected boolean paused = false;
   protected boolean repeat = false;
 
-  protected float rate;
   protected int bufWidth;
   protected int bufHeight;
   protected float volume;
@@ -318,9 +321,9 @@ public class Movie extends PImage implements PConstants {
 
     // Round the time to a multiple of the source framerate, in
     // order to eliminate stutter. Suggested by Daniel Shiffman
-    if (frameRate != -1) {
-      int frame = (int)(where * frameRate);
-      where = frame / frameRate;
+    if (nativeFrameRate != -1) {
+      int frame = (int)(where * nativeFrameRate);
+      where = frame / nativeFrameRate;
     }
 
     boolean res;
@@ -743,8 +746,9 @@ public class Movie extends PImage implements PConstants {
 
       setEventHandlerObject(parent);
 
-      rate = 1.0f;
+      nativeFrameRate = -1;
       frameRate = -1;
+      rate = 1.0f;
       volume = -1;
       sinkReady = false;
       bufWidth = bufHeight = 0;
@@ -940,7 +944,7 @@ public class Movie extends PImage implements PConstants {
     // This doesn't work any longer with GStreamer 1.x
     //return (float)playbin.getVideoSinkFrameRate();
     // so use the field extracted from the caps instead:
-    return frameRate;
+    return nativeFrameRate;
   }
 
 
@@ -1076,7 +1080,13 @@ public class Movie extends PImage implements PConstants {
       int w = capsStruct.getInteger("width");
       int h = capsStruct.getInteger("height");
       Fraction fps = capsStruct.getFraction("framerate");
-      frameRate = (float)fps.numerator / fps.denominator;
+      nativeFrameRate = (float)fps.numerator / fps.denominator;
+
+      // set the playback rate to the file's native framerate
+      // unless the user has already set a custom one
+      if (frameRate == -1.0) {
+        frameRate = nativeFrameRate;
+      }
 
       Buffer buffer = sample.getBuffer();
       ByteBuffer bb = buffer.map(false);
