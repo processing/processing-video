@@ -938,7 +938,10 @@ public class Movie extends PImage implements PConstants {
    * @return float
    */
   protected float getSourceFrameRate() {
-    return (float)playbin.getVideoSinkFrameRate();
+    // This doesn't work any longer with GStreamer 1.x
+    //return (float)playbin.getVideoSinkFrameRate();
+    // so use the field extracted from the caps instead:
+    return frameRate;
   }
 
 
@@ -1068,9 +1071,14 @@ public class Movie extends PImage implements PConstants {
     @Override
     public FlowReturn newSample(AppSink sink) {
       Sample sample = sink.pullSample();
+
+      // pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
       int w = capsStruct.getInteger("width");
       int h = capsStruct.getInteger("height");
+      Fraction fps = capsStruct.getFraction("framerate");
+      frameRate = (float)fps.numerator / fps.denominator;
+
       Buffer buffer = sample.getBuffer();
       ByteBuffer bb = buffer.map(false);
       if (bb != null) {
