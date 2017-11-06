@@ -1093,7 +1093,7 @@ public class Movie extends PImage implements PConstants {
       if (bb != null) {
         // If the EDT is still copying data from the buffer, just drop this frame
         if (!bufferLock.tryLock()) {
-          return null;
+          return FlowReturn.OK;
         }
         IntBuffer rgb = bb.asIntBuffer();
         
@@ -1117,7 +1117,7 @@ public class Movie extends PImage implements PConstants {
         buffer.unmap();
       }
       sample.dispose();
-      return null;
+      return FlowReturn.OK;
     }
   }
 
