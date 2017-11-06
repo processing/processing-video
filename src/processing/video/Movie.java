@@ -318,11 +318,10 @@ public class Movie extends PImage implements PConstants {
 
     // Round the time to a multiple of the source framerate, in
     // order to eliminate stutter. Suggested by Daniel Shiffman
-    // Later disabled since playbin.getVideoSinkFrameRate() causes
-    // JNA issues with GStreamer 1.x
-    //float fps = getSourceFrameRate();
-    //int frame = (int)(where * fps);
-    //where = frame / fps;
+    if (frameRate != -1) {
+      int frame = (int)(where * frameRate);
+      where = frame / frameRate;
+    }
 
     boolean res;
     long pos = Video.secToNanoLong(where);
