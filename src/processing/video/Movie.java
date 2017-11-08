@@ -225,12 +225,6 @@ public class Movie extends PImage implements PConstants {
     }
 
     frameRate = ifps;
-
-    // getState() will wait until any async state change
-    // (like seek in this case) has completed
-    seeking = true;
-    playbin.getState();
-    seeking = false;
   }
 
 
