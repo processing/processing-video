@@ -11,9 +11,9 @@ import processing.video.*;
 Movie mov;
 
 void setup() {
-  size(640, 360);
+  size(560, 406);
   background(0);
-  mov = new Movie(this, "transit.mov");
+  mov = new Movie(this, "launch2.mp4");
   mov.loop();
 }
 
@@ -29,5 +29,4 @@ void draw() {
   
   fill(255);
   text(nfc(newSpeed, 2) + "X", 10, 30); 
-}  
-
+}

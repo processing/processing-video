@@ -10,10 +10,10 @@ import processing.video.*;
 Movie movie;
 
 void setup() {
-  size(640, 360);
+  size(560, 406);
   background(0);
   // Load and play the video in a loop
-  movie = new Movie(this, "transit.mov");
+  movie = new Movie(this, "launch2.mp4");
   movie.loop();
 }
 
