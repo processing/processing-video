@@ -815,15 +815,22 @@ public class Movie extends PImage implements PConstants {
     bus.connect(new Bus.EOS() {
 
         public void endOfStream(GstObject arg0) {
-            try {
-                if (repeat) {
-                  playbin.seek(0, TimeUnit.NANOSECONDS);
-                } else {
-                    stop();
-                }
-            } catch (Exception ex) {
-              ex.printStackTrace();
+          if (repeat) {
+            if (0 < rate) {
+              // Playing forward, so we return to the beginning
+              jump(0);
+            } else {
+              // Playing backwards, so we go to the end.
+              jump(duration());
             }
+
+            // The rate is set automatically to 1 when restarting the
+            // stream, so we need to call frameRate in order to reset
+            // to the latest fps rate.
+            frameRate(frameRate);
+          } else {
+            playing = false;
+          }
         }
     });
   }
@@ -886,26 +893,6 @@ public class Movie extends PImage implements PConstants {
       }
     }
   }
-
-  protected void eosEvent() {
-    if (repeat) {
-      if (0 < rate) {
-        // Playing forward, so we return to the beginning
-        jump(0);
-      } else {
-        // Playing backwards, so we go to the end.
-        jump(duration());
-      }
-
-      // The rate is set automatically to 1 when restarting the
-      // stream, so we need to call frameRate in order to reset
-      // to the latest fps rate.
-      frameRate(frameRate);
-    } else {
-      playing = false;
-    }
-  }
-
 
   ////////////////////////////////////////////////////////////
 
