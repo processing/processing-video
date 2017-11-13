@@ -165,16 +165,16 @@ public class Video implements PConstants {
   static protected void buildWindowsPaths() {
     LibraryPath libPath = new LibraryPath();
     String path = libPath.get();
-    gstreamerLibPath = buildGStreamerLibPath(path, "\\windows" + bitsJVM);
-    gstreamerPluginPath = gstreamerLibPath + "\\plugins";
+    gstreamerLibPath = buildGStreamerLibPath(path, "windows" + bitsJVM);
+    gstreamerPluginPath = gstreamerLibPath + "\\gstreamer-1.0";
   }
 
   
   static protected void buildMacOSXPaths() {
     LibraryPath libPath = new LibraryPath();
-    String path = libPath.get();        
-    gstreamerLibPath = buildGStreamerLibPath(path, "/macosx" + bitsJVM);
-    gstreamerPluginPath = gstreamerLibPath + "/plugins";
+    String path = libPath.get();
+    gstreamerLibPath = buildGStreamerLibPath(path, "macosx" + bitsJVM);
+    gstreamerPluginPath = gstreamerLibPath + "/gstreamer-1.0";
   }
 
   
