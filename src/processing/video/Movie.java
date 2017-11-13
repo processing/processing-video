@@ -676,6 +676,7 @@ public class Movie extends PImage implements PConstants {
 
     File file;
 
+    // XXX: this currently fails because of "gst-plugin-scanner isn't executable"
     Video.init();
 
     // first check to see if this can be read locally from a file.
@@ -690,7 +691,10 @@ public class Movie extends PImage implements PConstants {
           playbin.setInputFile(file);
         }
       } catch (Exception e) {
-      } // ignored
+        // XXX: we want to see exceptions here such as
+        // "java.lang.IllegalArgumentException: No such Gstreamer factory: playbin"
+        // just hide the file-not-found ones
+      }
 
       // read from a file just hanging out in the local folder.
       // this might happen when the video library is used with some
