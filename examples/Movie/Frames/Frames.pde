@@ -34,7 +34,7 @@ void movieEvent(Movie m) {
 void draw() {
   background(0);
   image(mov, 0, 0, width, height);
-  fill(255);
+  fill(0);
   text(getFrame() + " / " + (getLength() - 1), 10, 30);
 }
 
