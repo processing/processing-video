@@ -4,7 +4,7 @@
   Part of the Processing project - http://processing.org
   Copyright (c) 2004-17 Ben Fry and Casey Reas
 
-  Originally from:
+  Based on from:
   http://blog.quirk.es/2009/11/setting-environment-variables-in-java.html
 
   This library is free software; you can redistribute it and/or
@@ -34,7 +34,7 @@ public class Environment {
     public int _putenv(String name);
   }
 
-  public interface LinuxLibC extends Library {
+  public interface UnixLibC extends Library {
     public int setenv(String name, String value, int overwrite);
     public int unsetenv(String name);
   }
@@ -42,16 +42,16 @@ public class Environment {
   static public class POSIX {
     static Object libc;
     static {
-      if (System.getProperty("os.name").equals("Linux")) {
-        libc = Native.loadLibrary("c", LinuxLibC.class);
-      } else {
+      if (System.getProperty("os.name").contains("Windows")) {
         libc = Native.loadLibrary("msvcrt", WinLibC.class);
+      } else {
+        libc = Native.loadLibrary("c", UnixLibC.class);
       }
     }
 
     public int setenv(String name, String value, int overwrite) {
-      if (libc instanceof LinuxLibC) {
-        return ((LinuxLibC)libc).setenv(name, value, overwrite);
+      if (libc instanceof UnixLibC) {
+        return ((UnixLibC)libc).setenv(name, value, overwrite);
       }
       else {
         return ((WinLibC)libc)._putenv(name + "=" + value);
@@ -59,8 +59,8 @@ public class Environment {
     }
 
     public int unsetenv(String name) {
-      if (libc instanceof LinuxLibC) {
-        return ((LinuxLibC)libc).unsetenv(name);
+      if (libc instanceof UnixLibC) {
+        return ((UnixLibC)libc).unsetenv(name);
       }
       else {
         return ((WinLibC)libc)._putenv(name + "=");
