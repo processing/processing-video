@@ -123,11 +123,21 @@ public class Video implements PConstants {
         System.err.println("Cannot load local version of GStreamer libraries.");
       }
     }
-    
+
+    // disable the use of gst-plugin-scanner on environments where we're
+    // not using the host system's installation of GStreamer
+    // the problem with gst-plugin-scanner is that the library expects it
+    // to exist at a specific location determinated at build time
+    if (PApplet.platform != LINUX) {
+      Environment.libc.setenv("GST_REGISTRY_FORK", "no", 1);
+    }
+
     String[] args = { "" };
     Gst.setUseDefaultContext(defaultGLibContext);
     Gst.init("Processing core video", args);
 
+    // instead of setting the plugin path via scanPath(), we could alternatively
+    // also set the GST_PLUGIN_PATH_1_0 environment variable
     addPlugins();
   }
 

@@ -676,7 +676,6 @@ public class Movie extends PImage implements PConstants {
 
     File file;
 
-    // XXX: this currently fails because of "gst-plugin-scanner isn't executable"
     Video.init();
 
     // first check to see if this can be read locally from a file.
