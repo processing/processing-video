@@ -33,11 +33,12 @@ import java.nio.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
 import java.lang.reflect.*;
 
 import org.freedesktop.gstreamer.*;
 import org.freedesktop.gstreamer.Buffer;
-import org.freedesktop.gstreamer.device.DeviceMonitor;
+import org.freedesktop.gstreamer.device.*;
 import org.freedesktop.gstreamer.elements.*;
 
 
@@ -1163,9 +1164,30 @@ public class Capture extends PImage implements PConstants {
    *  @return array of device names
    */
   static public String[] list() {
-    String[] out = new String[1];
-    out[0] = "0";
-    System.err.println("Device enumeration is currently not supported on your platform. This library will attempt to use the default capture device instead.");
+    Video.init();
+
+    String[] out;
+    if (PApplet.platform == LINUX) {
+
+      DeviceMonitor monitor = DeviceMonitor.createNew();
+      monitor.addFilter("Video/Source", null);
+      List<Device> devices = monitor.getDevices();
+
+      out = new String[devices.size()];
+      for (int i=0; i < devices.size(); i++) {
+        Device dev = devices.get(i);
+        out[i] = dev.getDisplayName();
+      }
+
+    } else {
+
+      // device enumeration is currently not supported on macOS or Windows
+      out = new String[1];
+      out[0] = "0";
+      System.err.println("Device enumeration is currently not supported on your platform. This library will attempt to use the default capture device instead.");
+
+    }
+
     return out;
   }
 
