@@ -115,7 +115,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent, String device) {
     // attemt to use a default resolution
-    this(parent, 640, 480, "0");
+    this(parent, 640, 480, device);
   }
 
   /**
