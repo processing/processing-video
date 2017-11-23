@@ -94,6 +94,7 @@ public class Capture extends PImage implements PConstants {
   protected Buffer natBuffer = null;
 //  protected BufferDataAppSink natSink = null;
   protected String device;
+  protected static List<Device> devices;    // we're caching this list for speed reasons
 
   NewSampleListener newSampleListener;
 //  NewPrerollListener newPrerollListener;
@@ -750,9 +751,11 @@ public class Capture extends PImage implements PConstants {
     } else if (PApplet.platform == LINUX) {
 
       // look for device
-      DeviceMonitor monitor = DeviceMonitor.createNew();
-      monitor.addFilter("Video/Source", null);
-      List<Device> devices = monitor.getDevices();
+      if (devices == null) {
+        DeviceMonitor monitor = DeviceMonitor.createNew();
+        monitor.addFilter("Video/Source", null);
+        devices = monitor.getDevices();
+      }
 
       for (int i=0; i < devices.size(); i++) {
         if (devices.get(i).getDisplayName().equals(device)) {
@@ -1120,7 +1123,7 @@ public class Capture extends PImage implements PConstants {
 
       DeviceMonitor monitor = DeviceMonitor.createNew();
       monitor.addFilter("Video/Source", null);
-      List<Device> devices = monitor.getDevices();
+      devices = monitor.getDevices();
 
       out = new String[devices.size()];
       for (int i=0; i < devices.size(); i++) {
