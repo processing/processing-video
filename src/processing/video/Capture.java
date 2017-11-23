@@ -1136,7 +1136,7 @@ public class Capture extends PImage implements PConstants {
       // device enumeration is currently not supported on macOS or Windows
       out = new String[1];
       out[0] = "0";
-      System.err.println("Device enumeration is currently not supported on your platform. This library will attempt to use the default capture device instead.");
+      System.err.println("Device enumeration is currently not supported on your platform.");
 
     }
 
