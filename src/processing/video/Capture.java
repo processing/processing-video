@@ -106,7 +106,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent) {
     // attemt to use a default resolution
-    this(parent, 640, 480, "0");
+    this(parent, 640, 480, null);
   }
 
   /**
@@ -127,7 +127,7 @@ public class Capture extends PImage implements PConstants {
    *  @param height height in pixels
    */
   public Capture(PApplet parent, int width, int height) {
-    this(parent, width, height, "0");
+    this(parent, width, height, null);
   }
 
   /**
@@ -139,7 +139,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent, int width, int height, float fps) {
     // XXX: handle rate
-    this(parent, width, height, "0");
+    this(parent, width, height, null);
   }
 
   /**
@@ -167,7 +167,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent, int width, int height, String device, float fps) {
     // XXX: handle rate
-    this(parent, width, height, "0");
+    this(parent, width, height, device);
   }
 
   /**
