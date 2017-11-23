@@ -132,6 +132,12 @@ public class Video implements PConstants {
       Environment.libc.setenv("GST_REGISTRY_FORK", "no", 1);
     }
 
+    // prevent globally installed libraries from being used on platforms
+    // where we ship GStreamer
+    if (PApplet.platform == WINDOWS || PApplet.platform == MACOSX) {
+      Environment.libc.setenv("GST_PLUGIN_SYSTEM_PATH_1_0", "", 1);
+    }
+
     String[] args = { "" };
     Gst.setUseDefaultContext(defaultGLibContext);
     Gst.init("Processing core video", args);
