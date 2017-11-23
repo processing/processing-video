@@ -738,100 +738,70 @@ public class Capture extends PImage implements PConstants {
     this.parent = parent;
     pipe = null;
 
-//    File file;
-
     Video.init();
 
-    String filter = "video/x-raw, width=" + width + ", height=" + height;
-    Caps caps = new Caps(filter);
-    
-    DeviceMonitor monitor = DeviceMonitor.createNew();
-    monitor.addFilter("Video/Source", caps);
-    // XXX: use getDevices() instead
-    Bus bus = monitor.getBus();
-    //System.out.println(monitor.getName());
-    //System.out.println("monitor bus: "  +bus);
-    bus.connect(new Bus.MESSAGE() {
-      @Override
-      public void busMessage(Bus arg0, Message arg1) {
-        System.out.println("Message received"); 
+
+    Element srcElement = null;
+    if (device == null) {
+
+      // use the default device from GStreamer
+      srcElement = ElementFactory.make("autovideosrc", null);
+
+    } else if (PApplet.platform == LINUX) {
+
+      // look for device
+      DeviceMonitor monitor = DeviceMonitor.createNew();
+      monitor.addFilter("Video/Source", null);
+      List<Device> devices = monitor.getDevices();
+
+      for (int i=0; i < devices.size(); i++) {
+        if (devices.get(i).getDisplayName().equals(device)) {
+          // found device
+          srcElement = devices.get(i).createElement(null);
+          break;
+        }
       }
-    });
 
+      // error out if we got passed an invalid device name
+      if (srcElement == null) {
+        throw new RuntimeException("Could not find device " + device);
+      }
 
-    String srcElement;
-    if (PApplet.platform == MACOSX) {
-      srcElement = "avfvideosrc device-index=" + device;
+    } else if (PApplet.platform == MACOSX) {
+
+      // use numeric index
+      srcElement = ElementFactory.make("avfvideosrc", null);
+      // XXX: check (int?)
+      srcElement.set("device-index", device);
+
     } else {
-      // XXX
-      srcElement = "autovideosrc";
+
+      // XXX: implement on Windows
+      srcElement = ElementFactory.make("autovideosrc", null);
+
     }
 
 
-    bin = Bin.launch(srcElement + " ! videoscale ! videoconvert ! capsfilter caps=\"video/x-raw, width=" + width + ", height=" + height + "\"", true);
     pipe = new Pipeline();
-    
 
-  
-    
-    /*
-    // first check to see if this can be read locally from a file.
+    Element videoscale = ElementFactory.make("videoscale", null);
+    Element videoconvert = ElementFactory.make("videoconvert", null);
+    Element capsfilter = ElementFactory.make("capsfilter", null);
+    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height));
+    rgbSink = new AppSink("sink");
+    rgbSink.set("emit-signals", true);
+    newSampleListener = new NewSampleListener();
+    rgbSink.connect(newSampleListener);
+    // XXX: unsure about BGRx
+    rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+
+    pipe.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+    pipe.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+
+    makeBusConnections(pipe.getBus());
+
+
     try {
-      try {
-        // first try a local file using the dataPath. usually this will
-        // work ok, but sometimes the dataPath is inside a jar file,
-        // which is less fun, so this will crap out.
-        file = new File(parent.dataPath(filename));
-        if (file.exists()) {
-          pipe = new PlayBin("Movie Player");
-          pipe.setInputFile(file);
-        }
-      } catch (Exception e) {
-      } // ignored
-
-      // read from a file just hanging out in the local folder.
-      // this might happen when the video library is used with some
-      // other application, or the person enters a full path name
-      if (pipe == null) {
-        try {
-          file = new File(filename);
-          if (file.exists()) {
-            pipe = new PlayBin("Movie Player");
-            pipe.setInputFile(file);
-          }
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-
-      if (pipe == null) {
-        // Try network read...
-        for (int i = 0; i < supportedProtocols.length; i++) {
-          if (filename.startsWith(supportedProtocols[i] + "://")) {
-            try {
-              pipe = new PlayBin("Movie Player");
-              pipe.setURI(URI.create(filename));
-              break;
-            } catch (Exception e) {
-              e.printStackTrace();
-            }
-          }
-        }
-      }
-    } catch (SecurityException se) {
-      // online, whups. catch the security exception out here rather than
-      // doing it three times (or whatever) for each of the cases above.
-    }
-
-    if (pipe == null) {
-      parent.die("Could not load movie file " + filename, null);
-    }
-*/
-    
-    
-    try {
-//      this.filename = filename; // for error messages
-
       // register methods
       parent.registerMethod("dispose", this);
       parent.registerMethod("post", this);
@@ -877,28 +847,7 @@ public class Capture extends PImage implements PConstants {
 
 
   protected void initSink() {
-    rgbSink = new AppSink("sink");
-    rgbSink.set("emit-signals", true);
-    newSampleListener = new NewSampleListener();
-//    newPrerollListener = new NewPrerollListener();
-    rgbSink.connect(newSampleListener);
-//    rgbSink.connect(newPrerollListener);
-    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-      rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
-    } else {
-      rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
-    }
-//    pipe.setVideoSink(rgbSink);
-    pipe.addMany(bin, rgbSink);
-    Pipeline.linkMany(bin, rgbSink); 
-    
-    makeBusConnections(pipe.getBus());
     pipe.setState(org.freedesktop.gstreamer.State.READY);
-
-    
-    
-
-
     sinkReady = true;
     newFrame = false;
   }
