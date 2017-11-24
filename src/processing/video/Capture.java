@@ -774,8 +774,7 @@ public class Capture extends PImage implements PConstants {
 
       // use numeric index
       srcElement = ElementFactory.make("avfvideosrc", null);
-      // XXX: check (int?)
-      srcElement.set("device-index", device);
+      srcElement.set("device-index", Integer.parseInt(device));
 
     } else {
 
