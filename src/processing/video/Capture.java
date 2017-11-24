@@ -106,7 +106,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent) {
     // attemt to use a default resolution
-    this(parent, 640, 480, null);
+    this(parent, 640, 480, null, 0);
   }
 
   /**
@@ -117,7 +117,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent, String device) {
     // attemt to use a default resolution
-    this(parent, 640, 480, device);
+    this(parent, 640, 480, device, 0);
   }
 
   /**
@@ -127,7 +127,7 @@ public class Capture extends PImage implements PConstants {
    *  @param height height in pixels
    */
   public Capture(PApplet parent, int width, int height) {
-    this(parent, width, height, null);
+    this(parent, width, height, null, 0);
   }
 
   /**
@@ -138,8 +138,7 @@ public class Capture extends PImage implements PConstants {
    *  @param fps frames per second
    */
   public Capture(PApplet parent, int width, int height, float fps) {
-    // XXX: handle rate
-    this(parent, width, height, null);
+    this(parent, width, height, null, fps);
   }
 
   /**
@@ -151,9 +150,7 @@ public class Capture extends PImage implements PConstants {
    *  @see list()
    */
   public Capture(PApplet parent, int width, int height, String device) {
-    super(width, height, RGB);
-    this.device = device;
-    initGStreamer(parent);
+    this(parent, width, height, device, 0);
   }
 
   /**
@@ -161,13 +158,15 @@ public class Capture extends PImage implements PConstants {
    *  @param parent PApplet, typically "this"
    *  @param width width in pixels
    *  @param height height in pixels
-   *  @param device device name
-   *  @param fps frames per second
+   *  @param device device name (null opens the default device)
+   *  @param fps frames per second (0 uses the default framerate)
    *  @see list()
    */
   public Capture(PApplet parent, int width, int height, String device, float fps) {
-    // XXX: handle rate
-    this(parent, width, height, device);
+    super(width, height, RGB);
+    this.device = device;
+    this.frameRate = fps;
+    initGStreamer(parent);
   }
 
   /**
@@ -283,7 +282,6 @@ public class Capture extends PImage implements PConstants {
       pipe.play();
     }
 
-    frameRate = ifps;
 
     // getState() will wait until any async state change
     // (like seek in this case) has completed
@@ -789,7 +787,15 @@ public class Capture extends PImage implements PConstants {
     Element videoscale = ElementFactory.make("videoscale", null);
     Element videoconvert = ElementFactory.make("videoconvert", null);
     Element capsfilter = ElementFactory.make("capsfilter", null);
-    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height));
+
+    String frameRateString;
+    if (frameRate != 0.0) {
+      frameRateString = ", framerate=" + fpsToFramerate(frameRate);
+    } else {
+      frameRateString = "";
+    }
+    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
+
     rgbSink = new AppSink("sink");
     rgbSink.set("emit-signals", true);
     newSampleListener = new NewSampleListener();
@@ -811,12 +817,25 @@ public class Capture extends PImage implements PConstants {
       setEventHandlerObject(parent);
 
       rate = 1.0f;
-      frameRate = -1;
       volume = -1;
       sinkReady = false;
       bufWidth = bufHeight = 0;
     } catch (Exception e) {
       e.printStackTrace();
+    }
+  }
+
+
+  public static String fpsToFramerate(float fps) {
+    String formatted = Float.toString(fps);
+    // this presumes the delimitter is always a dot
+    int i = formatted.indexOf('.');
+    if (Math.floor(fps) != fps) {
+      int denom = (int)Math.pow(10, formatted.length()-i-1);
+      int num = (int)(fps * denom);
+      return num + "/" + denom;
+    } else {
+      return (int)fps + "/1";
     }
   }
 
