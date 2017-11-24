@@ -748,7 +748,7 @@ public class Capture extends PImage implements PConstants {
       // use the default device from GStreamer
       srcElement = ElementFactory.make("autovideosrc", null);
 
-    } else if (PApplet.platform == LINUX) {
+    } else if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
 
       // look for device
       if (devices == null) {
@@ -779,8 +779,8 @@ public class Capture extends PImage implements PConstants {
 
     } else {
 
-      // XXX: implement on Windows
-      srcElement = ElementFactory.make("autovideosrc", null);
+       // unused fallback
+       srcElement = ElementFactory.make("autovideosrc", null);
 
     }
 
@@ -1119,7 +1119,7 @@ public class Capture extends PImage implements PConstants {
     Video.init();
 
     String[] out;
-    if (PApplet.platform == LINUX) {
+    if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
 
       DeviceMonitor monitor = DeviceMonitor.createNew();
       monitor.addFilter("Video/Source", null);
@@ -1133,7 +1133,7 @@ public class Capture extends PImage implements PConstants {
 
     } else {
 
-      // device enumeration is currently not supported on macOS or Windows
+      // device enumeration is currently not supported on macOS
       out = new String[1];
       out[0] = "0";
       System.err.println("Device enumeration is currently not supported on your platform.");
