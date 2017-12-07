@@ -13,13 +13,13 @@ Movie mov;
 int newFrame = 0;
 
 void setup() {
-  size(640, 360);
+  size(560, 406);
   background(0);
   // Load and set the video to play. Setting the video 
   // in play mode is needed so at least one frame is read
   // and we can get duration, size and other information from
   // the video stream. 
-  mov = new Movie(this, "transit.mov");  
+  mov = new Movie(this, "launch2.mp4");
   
   // Pausing the video at the first frame. 
   mov.play();
@@ -34,7 +34,7 @@ void movieEvent(Movie m) {
 void draw() {
   background(0);
   image(mov, 0, 0, width, height);
-  fill(255);
+  fill(0);
   text(getFrame() + " / " + (getLength() - 1), 10, 30);
 }
 

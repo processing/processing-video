@@ -26,85 +26,62 @@ package processing.video;
 
 import processing.core.*;
 
+//import java.awt.Dimension;
+//import java.io.*;
+//import java.net.URI;
 import java.nio.*;
-import java.util.ArrayList;
-import java.io.File;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
 import java.lang.reflect.*;
 
-import org.gstreamer.*;
-import org.gstreamer.Buffer;
-import org.gstreamer.elements.*;
-import org.gstreamer.interfaces.PropertyProbe;
-import org.gstreamer.interfaces.Property;
+import org.freedesktop.gstreamer.*;
+import org.freedesktop.gstreamer.Buffer;
+import org.freedesktop.gstreamer.device.*;
+import org.freedesktop.gstreamer.elements.*;
+
 
 /**
-   * ( begin auto-generated from Capture.xml )
+   * ( begin auto-generated from Movie.xml )
    *
-   * Datatype for storing and manipulating video frames from an attached
-   * capture device such as a camera. Use <b>Capture.list()</b> to show the
-   * names of any attached devices. Using the version of the constructor
-   * without <b>name</b> will attempt to use the last device used by a
-   * QuickTime program.
+   * Datatype for storing and playing movies in Apple's QuickTime format.
+   * Movies must be located in the sketch's data directory or an accessible
+   * place on the network to load without an error.
    *
    * ( end auto-generated )
  *
- * <h3>Advanced</h3>
- * Class for storing and manipulating video frames from an attached capture
- * device such as a camera.
  * @webref video
  * @usage application
  */
 public class Capture extends PImage implements PConstants {
-  protected static String sourceElementName;
-  protected static String devicePropertyName;
-  protected static String indexPropertyName;
-  // Default gstreamer capture plugin for each platform, and property names.
-  static {
-    if (PApplet.platform == MACOSX) {
-      sourceElementName = "qtkitvideosrc";
-      devicePropertyName = "device-name";
-      indexPropertyName = "device-index";
-    } else if (PApplet.platform == WINDOWS) {
-      sourceElementName = "ksvideosrc";
-      devicePropertyName = "device-name";
-      indexPropertyName = "device-index";
-    } else if (PApplet.platform == LINUX) {
-      sourceElementName = "v4l2src";
-      // The "device" property in v4l2src expects the device location
-      // (/dev/video0, etc). v4l2src has "device-name", which requires the
-      // human-readable name... but how to query in linux?.
-      devicePropertyName = "device";
-      indexPropertyName = "device-fd";
-    } else {}
-  }
-  protected static boolean useResMacHack = true;
-
+  public static String[] supportedProtocols = { "http" };
   public float frameRate;
-  public Pipeline pipeline;
+//  public String filename;
+  public Pipeline pipe;
+  Bin bin;
 
-  protected boolean capturing = false;
+  protected boolean playing = false;
+  protected boolean paused = false;
+  protected boolean repeat = false;
 
-  protected String frameRateString;
+  protected float rate;
   protected int bufWidth;
   protected int bufHeight;
+  protected float volume;
 
-  protected String sourceName;
-  protected Element sourceElement;
-
-  protected Method captureEventMethod;
+  protected Method movieEventMethod;
   protected Object eventHandler;
 
   protected boolean available;
-  protected boolean pipelineReady;
+  protected boolean sinkReady;
   protected boolean newFrame;
 
-  protected RGBDataAppSink rgbSink = null;
+  protected AppSink rgbSink = null;
   protected int[] copyPixels = null;
 
   protected boolean firstFrame = true;
-
-  protected int reqWidth;
-  protected int reqHeight;
+  protected boolean seeking = false;
 
   protected boolean useBufferSink = false;
   protected boolean outdatedPixels = true;
@@ -112,177 +89,133 @@ public class Capture extends PImage implements PConstants {
   protected Method sinkCopyMethod;
   protected Method sinkSetMethod;
   protected Method sinkDisposeMethod;
-  protected Method sinkGetMethod;
+  protected Method sinkGetMethod;  
   protected String copyMask;
   protected Buffer natBuffer = null;
-  protected BufferDataAppSink natSink = null;
+//  protected BufferDataAppSink natSink = null;
+  protected String device;
+  protected static List<Device> devices;    // we're caching this list for speed reasons
 
+  NewSampleListener newSampleListener;
+//  NewPrerollListener newPrerollListener;
+  private final Lock bufferLock = new ReentrantLock();
 
+  /**
+   *  Open the default capture device
+   *  @param parent PApplet, typically "this"
+   */
   public Capture(PApplet parent) {
-    String[] configs = Capture.list();
-    if (configs.length == 0) {
-      throw new RuntimeException("There are no cameras available for capture");
-    }
-    String name = getName(configs[0]);
-    int[] size = getSize(configs[0]);
-    String fps = getFrameRate(configs[0]);
-    String idName;
-    Object idValue;
-    if (devicePropertyName.equals("")) {
-      // For plugins without device name property, the name is casted
-      // as an index
-      idName = indexPropertyName;
-      idValue = new Integer(PApplet.parseInt(name));
-    } else {
-      idName = devicePropertyName;
-      idValue = name;
-    }
-    initGStreamer(parent, size[0], size[1], sourceElementName,
-                  idName, idValue, fps);
+    // attemt to use a default resolution
+    this(parent, 640, 480, null, 0);
   }
-
-
-  public Capture(PApplet parent, String requestConfig) {
-    String name = getName(requestConfig);
-    int[] size = getSize(requestConfig);
-    String fps = getFrameRate(requestConfig);
-    String idName;
-    Object idValue;
-    if (devicePropertyName.equals("")) {
-      // For plugins without device name property, the name is casted
-      // as an index
-      idName = indexPropertyName;
-      idValue = new Integer(PApplet.parseInt(name));
-    } else {
-      idName = devicePropertyName;
-      idValue = name;
-    }
-    initGStreamer(parent, size[0], size[1], sourceElementName,
-                  idName, idValue, fps);
-  }
-
 
   /**
-   * @param parent typically use "this"
-   * @param requestWidth width of the frame
-   * @param requestHeight height of the frame
+   *  Open a specific capture device
+   *  @param parent PApplet, typically "this"
+   *  @param device device name
+   *  @see list()
    */
-  public Capture(PApplet parent, int requestWidth, int requestHeight) {
-    super(requestWidth, requestHeight, RGB);
-    initGStreamer(parent, requestWidth, requestHeight, sourceElementName,
-                  null, null, "");
+  public Capture(PApplet parent, String device) {
+    // attemt to use a default resolution
+    this(parent, 640, 480, device, 0);
   }
 
-
   /**
-   * <h3>Advanced</h3>
-   * Constructor that takes resolution and framerate.
-   *
-   * @param frameRate number of frames to read per second
+   *  Open the default capture device with a given resolution
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
    */
-  public Capture(PApplet parent, int requestWidth, int requestHeight,
-                 int frameRate) {
-    super(requestWidth, requestHeight, RGB);
-    initGStreamer(parent, requestWidth, requestHeight, sourceElementName,
-                  null, null, frameRate + "/1");
+  public Capture(PApplet parent, int width, int height) {
+    this(parent, width, height, null, 0);
   }
 
-
   /**
-   * <h3>Advanced</h3>
-   * This constructor allows to specify resolution and camera name.
-   *
-   * @param cameraName name of the camera
+   *  Open the default capture device with a given resolution and framerate
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
+   *  @param fps frames per second
    */
-  public Capture(PApplet parent, int requestWidth, int requestHeight,
-                 String cameraName) {
-    super(requestWidth, requestHeight, RGB);
-    String idName;
-    Object idValue;
-    if (-1 < cameraName.indexOf("name=")) {
-      // cameraName contains a full config string from gstreamer
-      cameraName = getName(cameraName);  
-    }    
-    if (devicePropertyName.equals("")) {
-      // For plugins without device name property, the name is casted
-      // as an index
-      idName = indexPropertyName;
-      idValue = new Integer(PApplet.parseInt(cameraName));
-    } else {
-      idName = devicePropertyName;
-      idValue = cameraName;
-    }
-    initGStreamer(parent, requestWidth, requestHeight, sourceElementName,
-                  idName, idValue, "");
+  public Capture(PApplet parent, int width, int height, float fps) {
+    this(parent, width, height, null, fps);
   }
 
-
   /**
-   * <h3>Advanced</h3>
-   * This constructor allows to specify the camera name and the desired
-   * framerate, in addition to the resolution.
+   *  Open a specific capture device with a given resolution
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
+   *  @param device device name
+   *  @see list()
    */
-  public Capture(PApplet parent, int requestWidth, int requestHeight,
-                 String cameraName, int frameRate) {
-    super(requestWidth, requestHeight, RGB);
-    String idName;
-    Object idValue;
-    if (-1 < cameraName.indexOf("name=")) {
-      // cameraName contains a full config string from gstreamer
-      cameraName = getName(cameraName);  
-    }    
-    if (devicePropertyName.equals("")) {
-      // For plugins without device name property, the name is casted
-      // as an index
-      idName = indexPropertyName;
-      idValue = new Integer(PApplet.parseInt(cameraName));
-    } else {
-      idName = devicePropertyName;
-      idValue = cameraName;
-    }
-    initGStreamer(parent, requestWidth, requestHeight, sourceElementName,
-                  idName, idValue, frameRate + "/1");
+  public Capture(PApplet parent, int width, int height, String device) {
+    this(parent, width, height, device, 0);
   }
 
+  /**
+   *  Open a specific capture device with a given resolution and framerate
+   *  @param parent PApplet, typically "this"
+   *  @param width width in pixels
+   *  @param height height in pixels
+   *  @param device device name (null opens the default device)
+   *  @param fps frames per second (0 uses the default framerate)
+   *  @see list()
+   */
+  public Capture(PApplet parent, int width, int height, String device, float fps) {
+    super(width, height, RGB);
+    this.device = device;
+    this.frameRate = fps;
+    initGStreamer(parent);
+  }
 
   /**
-   * Disposes all the native resources associated to this capture device.
-   *
+   * Disposes all the native resources associated to this movie.
+   * 
    * NOTE: This is not official API and may/will be removed at any time.
    */
   public void dispose() {
-    if (pipeline != null) {
-      try {
-        if (pipeline.isPlaying()) {
-          pipeline.stop();
-          pipeline.getState();
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
+    if (pipe != null) {
+//      try {
+//        if (playbin.isPlaying()) {
+//          playbin.stop();
+//          playbin.getState();
+//        }
+//      } catch (Exception e) {
+//        e.printStackTrace();
+//      }
 
       pixels = null;
 
-      copyPixels = null;
-      if (rgbSink != null) {
-        rgbSink.removeListener();
-        rgbSink.dispose();
-        rgbSink = null;
-      }
+      rgbSink.disconnect(newSampleListener);
+//      sink.disconnect(newPrerollListener);
+      rgbSink.dispose();
+      pipe.setState(org.freedesktop.gstreamer.State.NULL);
+      pipe.getState();
+      pipe.getBus().dispose();
+      pipe.dispose();
+      
+      
+//      copyPixels = null;
+//      if (rgbSink != null) {
+//        rgbSink.removeListener();
+//        rgbSink.dispose();
+//        rgbSink = null;
+//      }
+      
+//      natBuffer = null;
+//      if (natSink != null) {
+//        natSink.removeListener();
+//        natSink.dispose();
+//        natSink = null;
+//      }
 
-      natBuffer = null;
-      if (natSink != null) {
-        natSink.removeListener();
-        natSink.dispose();
-        natSink = null;
-      }
-
-      pipeline.dispose();
-      pipeline = null;
-
+//      playbin.dispose();
+//      playbin = null;
+      
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
-      parent.unregisterMethod("post", this);
+      parent.unregisterMethod("post", this);      
     }
   }
 
@@ -300,14 +233,218 @@ public class Capture extends PImage implements PConstants {
 
 
   /**
-   * ( begin auto-generated from Capture_available.xml )
+   * ( begin auto-generated from Movie_frameRate.xml )
    *
-   * Returns "true" when a new video frame is available to read.
+   * Sets how often frames are read from the movie. Setting the <b>fps</b>
+   * parameter to 4, for example, will cause 4 frames to be read per second.
    *
    * ( end auto-generated )
    *
-   * @webref capture
-   * @brief Returns "true" when a new video frame is available to read
+   * @webref movie
+   * @usage web_application
+   * @param ifps speed of the movie in frames per second
+   * @brief Sets the target frame rate
+   */
+  public void frameRate(float ifps) {
+    if (seeking) return;
+
+    // We calculate the target ratio in the case both the
+    // current and target framerates are valid (greater than
+    // zero), otherwise we leave it as 1.
+    float f = (0 < ifps && 0 < frameRate) ? ifps / frameRate : 1;
+
+    if (playing) {
+      pipe.pause();
+      pipe.getState();
+    }
+
+    long t = pipe.queryPosition(TimeUnit.NANOSECONDS);
+
+    boolean res;
+    long start, stop;
+    if (rate > 0) {
+      start = t;
+      stop = -1;
+    } else {
+      start = 0;
+      stop = t;
+    }
+
+    res = pipe.seek(rate * f, Format.TIME, SeekFlags.FLUSH,
+                       SeekType.SET, start, SeekType.SET, stop);
+    pipe.getState();
+
+    if (!res) {
+      PGraphics.showWarning("Seek operation failed.");
+    }
+
+    if (playing) {
+      pipe.play();
+    }
+
+
+    // getState() will wait until any async state change
+    // (like seek in this case) has completed
+    seeking = true;
+    pipe.getState();
+    seeking = false;
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_speed.xml )
+   *
+   * Sets the relative playback speed of the movie. The <b>rate</b>
+   * parameters sets the speed where 2.0 will play the movie twice as fast,
+   * 0.5 will play at half the speed, and -1 will play the movie in normal
+   * speed in reverse.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @param irate speed multiplier for movie playback
+   * @brief Sets the relative playback speed
+   */
+  public void speed(float irate) {
+    // If the frameRate() method is called continuously with very similar
+    // rate values, playback might become sluggish. This condition attempts
+    // to take care of that.
+    if (PApplet.abs(rate - irate) > 0.1) {
+      rate = irate;
+      frameRate(frameRate); // The framerate is the same, but the rate (speed) could be different.
+    }
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_duration.xml )
+   *
+   * Returns the length of the movie in seconds. If the movie is 1 minute and
+   * 20 seconds long the value returned will be 80.0.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @brief Returns length of movie in seconds
+   */
+  public float duration() {
+    float sec = pipe.queryDuration().toSeconds();
+    float nanosec = pipe.queryDuration().getNanoSeconds();
+    return sec + Video.nanoSecToSecFrac(nanosec);
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_time.xml )
+   *
+   * Returns the location of the playback head in seconds. For example, if
+   * the movie has been playing for 4 seconds, the number 4.0 will be returned.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @brief Returns location of playback head in units of seconds
+   */
+  public float time() {
+    float sec = pipe.queryPosition().toSeconds();
+    float nanosec = pipe.queryPosition().getNanoSeconds();
+    return sec + Video.nanoSecToSecFrac(nanosec);
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_jump.xml )
+   *
+   * Jumps to a specific location within a movie. The parameter <b>where</b>
+   * is in terms of seconds. For example, if the movie is 12.2 seconds long,
+   * calling <b>jump(6.1)</b> would go to the middle of the movie.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @param where position to jump to specified in seconds
+   * @brief Jumps to a specific location
+   */
+  public void jump(float where) {
+    
+//    if (seeking) return;
+//
+//    if (!sinkReady) {
+//      initSink();
+//    }
+//
+//    // Round the time to a multiple of the source framerate, in
+//    // order to eliminate stutter. Suggested by Daniel Shiffman
+//    float fps = getSourceFrameRate();
+//    int frame = (int)(where * fps);
+//    where = frame / fps;
+//
+//    boolean res;
+//    long pos = Video.secToNanoLong(where);
+//
+//    res = pipe.seek(rate, Format.TIME, SeekFlags.FLUSH,
+//                       SeekType.SET, pos, SeekType.NONE, -1);
+//
+//    if (!res) {
+//      PGraphics.showWarning("Seek operation failed.");
+//    }
+
+    // getState() will wait until any async state change
+    // (like seek in this case) has completed
+//    seeking = true;
+//    pipe.getState();
+//    seeking = false;    
+    /*
+    if (seeking) return; // don't seek again until the current seek operation is done.
+
+    if (!sinkReady) {
+      initSink();
+    }
+
+    // Round the time to a multiple of the source framerate, in
+    // order to eliminate stutter. Suggested by Daniel Shiffman    
+    float fps = getSourceFrameRate();
+    int frame = (int)(where * fps);
+    final float seconds = frame / fps;
+    
+    // Put the seek operation inside a thread to avoid blocking the main 
+    // animation thread
+    Thread seeker = new Thread() {
+      @Override
+      public void run() {
+        long pos = Video.secToNanoLong(seconds);
+        boolean res = playbin.seek(rate, Format.TIME, SeekFlags.FLUSH,
+                                   SeekType.SET, pos, SeekType.NONE, -1);
+        if (!res) {
+          PGraphics.showWarning("Seek operation failed.");
+        }
+
+        // getState() will wait until any async state change
+        // (like seek in this case) has completed
+        seeking = true;
+        playbin.getState();
+        seeking = false;        
+      }
+    };
+    seeker.start();    
+    */
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_available.xml )
+   *
+   * Returns "true" when a new movie frame is available to read.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @brief Returns "true" when a new movie frame is available to read.
    */
   public boolean available() {
     return available;
@@ -315,74 +452,164 @@ public class Capture extends PImage implements PConstants {
 
 
   /**
-   * ( begin auto-generated from Capture_start.xml )
+   * ( begin auto-generated from Movie_play.xml )
    *
-   * Starts capturing frames from the selected device.
+   * Plays a movie one time and stops at the last frame.
    *
    * ( end auto-generated )
    *
-   * @webref capture
-   * @brief Starts capturing frames from the selected device
+   * @webref movie
+   * @usage web_application
+   * @brief Plays movie one time and stops at the last frame
    */
   public void start() {
-    boolean init = false;
-    if (!pipelineReady) {
-      initPipeline();
-      init = true;
+    if (seeking) return;
+
+    if (!sinkReady) {
+      initSink();
     }
 
-    capturing = true;
-    pipeline.play();
-
-    if (init) {
-      checkResIsValid();
-    }
+    playing = true;
+    paused = false;
+    pipe.play();
+    pipe.getState();
   }
 
 
   /**
-   * ( begin auto-generated from Capture_stop.xml )
+   * ( begin auto-generated from Movie_loop.xml )
    *
-   * Stops capturing frames from an attached device.
+   * Plays a movie continuously, restarting it when it's over.
    *
    * ( end auto-generated )
    *
-   * @webref capture
-   * @brief Stops capturing frames from an attached device
+   * @webref movie
+   * @usage web_application
+   * @brief Plays a movie continuously, restarting it when it's over.
+   */
+//  public void loop() {
+//    if (seeking) return;
+//
+//    repeat = true;
+//    play();
+//  }
+
+
+  /**
+   * ( begin auto-generated from Movie_noLoop.xml )
+   *
+   * If a movie is looping, calling noLoop() will cause it to play until the
+   * end and then stop on the last frame.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @brief Stops the movie from looping
+   */
+  public void noLoop() {
+    if (seeking) return;
+
+    if (!sinkReady) {
+      initSink();
+    }
+
+    repeat = false;
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_pause.xml )
+   *
+   * Pauses a movie during playback. If a movie is started again with play(),
+   * it will continue from where it was paused.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @brief Pauses the movie
+   */
+  public void pause() {
+    if (seeking) return;
+
+    if (!sinkReady) {
+      initSink();
+    }
+
+    playing = false;
+    paused = true;
+    pipe.pause();
+    pipe.getState();
+  }
+
+
+  /**
+   * ( begin auto-generated from Movie_stop.xml )
+   *
+   * Stops a movie from continuing. The playback returns to the beginning so
+   * when a movie is played, it will begin from the beginning.
+   *
+   * ( end auto-generated )
+   *
+   * @webref movie
+   * @usage web_application
+   * @brief Stops the movie
    */
   public void stop() {
-    if (!pipelineReady) {
-      initPipeline();
+    if (seeking) return;
+
+    if (!sinkReady) {
+      initSink();
     }
 
-    capturing = false;
-    pipeline.stop();
-    pipeline.getState();
+    if (playing) {
+      jump(0);
+      playing = false;
+    }
+    paused = false;
+    pipe.stop();
+    pipe.getState();
   }
 
 
   /**
-   * ( begin auto-generated from Capture_read.xml )
+   * ( begin auto-generated from Movie_read.xml )
    *
-   * Reads the current video frame.
+   * Reads the current frame of the movie.
    *
    * ( end auto-generated )
    *
-   * <h3>Advanced</h3>
-   * This method() and invokeEvent() are now synchronized, so that invokeEvent()
-   * can't be called whilst we're busy reading. Problematic frame error
-   * fixed by Charl P. Botha <charlbotha.com>
-   *
-   * @webref capture
-   * @brief Reads the current video frame
+   * @webref movie
+   * @usage web_application
+   * @brief Reads the current frame
    */
   public synchronized void read() {
-    if (frameRate < 0) {
-      // Framerate not set yet, so we obtain from stream,
-      // which is already playing since we are in read().
-      frameRate = getSourceFrameRate();
+//    if (frameRate < 0) {
+//      // Framerate not set yet, so we obtain from stream,
+//      // which is already playing since we are in read().
+//      frameRate = getSourceFrameRate();
+//    }
+//    if (volume < 0) {
+//      // Idem for volume
+//      volume = (float)playbin.getVolume();
+//    }
+//  
+//    if (copyPixels == null) {
+//      return;
+//    }
+
+    if (firstFrame) {
+      super.init(bufWidth, bufHeight, RGB, 1);
+      firstFrame = false;
     }
 
+    int[] temp = pixels;
+    pixels = copyPixels;
+    updatePixels();
+    copyPixels = temp;    
+    
+/*
     if (useBufferSink) { // The native buffer from gstreamer is copied to the buffer sink.
       outdatedPixels = true;
       if (natBuffer == null) {
@@ -406,8 +633,7 @@ public class Capture extends PImage implements PConstants {
       ByteBuffer byteBuffer = natBuffer.getByteBuffer();
 
       try {
-        sinkCopyMethod.invoke(bufferSink,
-          new Object[] { natBuffer, byteBuffer, bufWidth, bufHeight });
+        sinkCopyMethod.invoke(bufferSink, new Object[] { natBuffer, byteBuffer, bufWidth, bufHeight });
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -428,15 +654,31 @@ public class Capture extends PImage implements PConstants {
       updatePixels();
       copyPixels = temp;
     }
+    */
 
     available = false;
     newFrame = true;
   }
 
 
+  /**
+   * Change the volume. Values are from 0 to 1.
+   *
+   * @param float v
+   */
+//  public void volume(float v) {
+//    if (playing && PApplet.abs(volume - v) > 0.001f) {
+//      pipe.setVolume(v);
+//      volume = v;
+//    }
+//  }
+
+
   public synchronized void loadPixels() {
     super.loadPixels();
+    
     if (useBufferSink) {
+      /*
       if (natBuffer != null) {
         // This means that the OpenGL texture hasn't been created so far (the
         // video frame not drawn using image()), but the user wants to use the
@@ -444,7 +686,7 @@ public class Capture extends PImage implements PConstants {
         IntBuffer buf = natBuffer.getByteBuffer().asIntBuffer();
         buf.rewind();
         buf.get(pixels);
-        Video.convertToARGB(pixels, width, height);
+        Video.convertToARGB(pixels, width, height);        
       } else if (sinkGetMethod != null) {
         try {
           // sinkGetMethod will copy the latest buffer to the pixels array,
@@ -453,20 +695,30 @@ public class Capture extends PImage implements PConstants {
           sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
         } catch (Exception e) {
           e.printStackTrace();
-        }
+        }        
       }
-
+      */
+      
+      try {
+        // sinkGetMethod will copy the latest buffer to the pixels array,
+        // and the pixels will be copied to the texture when the OpenGL
+        // renderer needs to draw it.
+        sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
+      } catch (Exception e) {
+        e.printStackTrace();
+      }    
+      
       outdatedPixels = false;
     }
   }
-
-
+  
+  
   public int get(int x, int y) {
     if (outdatedPixels) loadPixels();
     return super.get(x, y);
   }
-
-
+  
+  
   protected void getImpl(int sourceX, int sourceY,
                          int sourceWidth, int sourceHeight,
                          PImage target, int targetX, int targetY) {
@@ -474,507 +726,123 @@ public class Capture extends PImage implements PConstants {
     super.getImpl(sourceX, sourceY, sourceWidth, sourceHeight,
                   target, targetX, targetY);
   }
-
-
-  ////////////////////////////////////////////////////////////
-
-  // List methods.
-
-
-  /**
-   * ( begin auto-generated from Capture_list.xml )
-   *
-   * Gets a list of all available capture devices such as a camera. Use
-   * <b>print()</b> to write the information to the text window.
-   *
-   * ( end auto-generated )
-   *
-   * @webref capture
-   * @brief Gets a list of all available capture devices such as a camera
-   */
-  static public String[] list() {
-    if (devicePropertyName.equals("")) {
-      return list(sourceElementName, indexPropertyName);
-    } else {
-      return list(sourceElementName, devicePropertyName);
-    }
-  }
-
-
-  static protected String[] list(String sourceName, String propertyName) {
-    Video.init();
-    ArrayList<String> devices = listDevices(sourceName, propertyName);
-
-    ArrayList<String> configList = new ArrayList<String>();
-    for (String device: devices) {
-      ArrayList<String> resolutions = listResolutions(sourceName, propertyName,
-                                                      device);
-      if (0 < resolutions.size()) {
-        for (String res: resolutions) {
-          configList.add("name=" + device + "," + res);
-        }
-      } else {
-        configList.add("name=" + device);
-      }
-    }
-
-    String[] configs = new String[configList.size()];
-    for (int i = 0; i < configs.length; i++) {
-      configs[i] = configList.get(i);
-    }
-
-    return configs;
-  }
-
-
-  static protected ArrayList<String> listDevices(String sourceName,
-                                                 String propertyName) {
-    ArrayList<String> devices = new ArrayList<String>();
-    try {
-      // Using property-probe interface
-      Element videoSource = ElementFactory.make(sourceName, "Source");
-      PropertyProbe probe = PropertyProbe.wrap(videoSource);
-      if (probe != null) {
-        Property property = probe.getProperty(propertyName);
-        if (property != null) {
-          Object[] values = probe.getValues(property);
-          if (values != null) {
-            for (int i = 0; i < values.length; i++) {
-              if (values[i] instanceof String) {
-                devices.add((String)values[i]);
-              } else if (values[i] instanceof Integer) {
-                devices.add(((Integer)values[i]).toString());
-              }
-            }
-          }
-        }
-      }
-    } catch (IllegalArgumentException e) {
-      if (PApplet.platform == LINUX) {
-        // Linux hack to detect currently connected cameras
-        // by looking for device files named /dev/video0, /dev/video1, etc.
-        devices = new ArrayList<String>();
-        String dir = "/dev";
-        File libPath = new File(dir);
-        String[] files = libPath.list();
-        if (files != null) {
-          for (int i = 0; i < files.length; i++) {
-            if (-1 < files[i].indexOf("video")) {
-              devices.add("/dev/" + files[i]);
-            }
-          }
-        }
-      } else {
-        PGraphics.showWarning("The capture plugin does not support " +
-                              "device query!");
-        devices = new ArrayList<String>();
-      }
-    }
-    return devices;
-  }
-
-
-  static protected ArrayList<String> listResolutions(String sourceName,
-                                                     String propertyName,
-                                                     Object propertyValue) {
-    // Creating temporary pipeline so that we can query
-    // the resolutions supported by the device.
-    Pipeline testPipeline = new Pipeline("test");
-    Element source = ElementFactory.make(sourceName, "source");
-    source.set(propertyName, propertyValue);
-
-    BufferDataAppSink sink = new BufferDataAppSink("sink", "",
-        new BufferDataAppSink.Listener() {
-          public void bufferFrame(int w, int h, Buffer buffer) { }
-        });
-    testPipeline.addMany(source, sink);
-    Element.linkMany(source, sink);
-
-    // Play/pause sequence (with getState() calls to to make sure
-    // all async operations are done) to trigger the capture momentarily
-    // for the device and obtain its supported resolutions.
-    testPipeline.play();
-    testPipeline.getState();
-    testPipeline.pause();
-    testPipeline.getState();
-
-    ArrayList<String> resolutions = new ArrayList<String>();
-    addResFromSource(resolutions, source);
-
-    testPipeline.stop();
-    testPipeline.getState();
-
-    if (sink != null) {
-      sink.removeListener();
-      sink.dispose();
-    }
-
-    testPipeline.dispose();
-    return resolutions;
-  }
-
-
-  static protected void addResFromSource(ArrayList<String> res, Element src) {
-    if (PApplet.platform == MACOSX && useResMacHack) {
-      addResFromSourceMacHack(res, src);
-    } else {
-      addResFromSourceImpl(res, src);
-    }
-  }
-
-
-  static protected void addResFromSourceImpl(ArrayList<String> res,
-                                             Element src) {
-    for (Pad pad : src.getPads()) {
-      Caps caps = pad.getCaps();
-      int n = caps.size();
-      for (int i = 0; i < n; i++) {
-        Structure str = caps.getStructure(i);
-
-        if (!str.hasIntField("width") || !str.hasIntField("height")) continue;
-
-        int w = ((Integer)str.getValue("width")).intValue();
-        int h = ((Integer)str.getValue("height")).intValue();
-
-        if (PApplet.platform == WINDOWS) {
-          // In Windows the getValueList() method doesn't seem to
-          // return a valid list of fraction values, so working on
-          // the string representation of the caps structure.
-          addResFromString(res, str.toString(), w, h);
-        } else {
-          addResFromStructure(res, str, w, h);
-        }
-      }
-    }
-  }
-
-
-  // The problem on OSX, at least when using qtkitvideosrc, is that it is only
-  // possible to obtain a single supported caps, the native maximum, using
-  // getNegotiatedCaps. getCaps() just gives the maximum possible ranges that
-  // are useless to build a list of supported resolutions. Using the fact that
-  // QTKit allows to capture streams at arbitrary resolutions, then the list is
-  // faked by repeatedly dividing the maximum by 2 until the width becomes too
-  // small (or not divisible by 2).
-  static protected void addResFromSourceMacHack(ArrayList<String> res,
-                                                Element src) {
-    for (Pad pad : src.getPads()) {
-      Caps caps = pad.getNegotiatedCaps();
-      int n = caps.size();
-      if (0 < n) {
-        Structure str = caps.getStructure(0);
-
-        if (!str.hasIntField("width") || !str.hasIntField("height")) return;
-
-        int w = ((Integer)str.getValue("width")).intValue();
-        int h = ((Integer)str.getValue("height")).intValue();
-        while (80 <= w) {
-          int num = 30;
-          int den = 1;
-          try {
-            Fraction fr = str.getFraction("framerate");
-            num = fr.numerator;
-            den = fr.denominator;
-          } catch (Exception e) {
-          }
-
-          res.add(makeResolutionString(w, h, num, den));
-          if (num == 30 && den == 1) {
-            // Adding additional framerates to allow for slower capture. Again,
-            // QTKit can output frames at arbitrary rates.
-            res.add(makeResolutionString(w, h, 15, 1));
-            res.add(makeResolutionString(w, h, 1, 1));
-          }
-
-          if (w % 2 == 0 && h % 2 == 0) {
-            w /= 2;
-            h /= 2;
-          } else {
-            break;
-          }
-        }
-      }
-    }
-  }
-
-
-  static protected void addResFromString(ArrayList<String> res, String str,
-                                         int w, int h) {
-    int n0 = str.indexOf("framerate=(fraction)");
-    if (-1 < n0) {
-      String temp = str.substring(n0 + 20, str.length());
-      int n1 = temp.indexOf("[");
-      int n2 = temp.indexOf("]");
-      if (-1 < n1 && -1 < n2) {
-        // A list of fractions enclosed between '[' and ']'
-        temp = temp.substring(n1 + 1, n2);
-        String[] fractions = temp.split(",");
-        for (int k = 0; k < fractions.length; k++) {
-          String fpsStr = fractions[k].trim();
-          res.add(makeResolutionString(w, h, fpsStr));
-        }
-      } else {
-        // A single fraction
-        int n3 = temp.indexOf(",");
-        int n4 = temp.indexOf(";");
-        if (-1 < n3 || -1 < n4) {
-          int n5 = -1;
-          if (n3 == -1) {
-            n5 = n4;
-          } else if (n4 == -1) {
-            n5 = n3;
-          } else {
-            n5 = PApplet.min(n3, n4);
-          }
-
-          temp = temp.substring(0, n5);
-          String fpsStr = temp.trim();
-          res.add(makeResolutionString(w, h, fpsStr));
-        }
-      }
-    }
-  }
-
-
-  static protected void addResFromStructure(ArrayList<String> res,
-                                            Structure str, int w, int h) {
-    boolean singleFrac = false;
-    try {
-      Fraction fr = str.getFraction("framerate");
-      res.add(makeResolutionString(w, h, fr.numerator, fr.denominator));
-      singleFrac = true;
-    } catch (Exception e) {
-    }
-
-    if (!singleFrac) {
-      ValueList flist = null;
-
-      try {
-        flist = str.getValueList("framerate");
-      } catch (Exception e) {
-      }
-
-      if (flist != null) {
-        // All the framerates are put together, but this is not
-        // entirely accurate since there might be some of them
-        // that work only for certain resolutions.
-        for (int k = 0; k < flist.getSize(); k++) {
-          Fraction fr = flist.getFraction(k);
-          res.add(makeResolutionString(w, h, fr.numerator, fr.denominator));
-        }
-      }
-    }
-  }
-
-
-  static protected String makeResolutionString(int width, int height, int
-                                               fpsNumerator,
-                                               int fpsDenominator) {
-    String res = "size=" + width + "x" + height + ",fps=" + fpsNumerator;
-    if (fpsDenominator != 1) {
-      res += "/" + fpsDenominator;
-    }
-    return res;
-  }
-
-
-  static protected String makeResolutionString(int width, int height,
-                                               String fpsStr) {
-    String res = "size=" + width + "x" + height;
-    String[] parts = fpsStr.split("/");
-    if (parts.length == 2) {
-      int fpsNumerator = PApplet.parseInt(parts[0]);
-      int fpsDenominator = PApplet.parseInt(parts[1]);
-      res += ",fps=" + fpsNumerator;
-      if (fpsDenominator != 1) {
-        res += "/" + fpsDenominator;
-      }
-    }
-    return res;
-  }
-
-
-  protected void checkResIsValid() {
-    ArrayList<String> resolutions = new ArrayList<String>();
-    addResFromSource(resolutions, sourceElement);
-
-    boolean valid = resolutions.size() == 0;
-    for (String res: resolutions) {
-      if (validRes(res)) {
-        valid = true;
-        break;
-      }
-    }
-
-    if (!valid) {
-      String fpsStr = "";
-      if (!frameRateString.equals("")) {
-        fpsStr = ", " + frameRateString + "fps";
-      }
-      throw new RuntimeException("The requested resolution of " + reqWidth +
-                                 "x" + reqHeight + fpsStr +
-                                 " is not supported by the selected capture " +
-                                 "device.\n");
-    }
-  }
-
-
-  protected void checkValidDevices(String src) {
-    ArrayList<String> devices;
-    if (devicePropertyName.equals("")) {
-      devices = listDevices(src, indexPropertyName);
-    } else {
-      devices = listDevices(src, devicePropertyName);
-    }
-    if (devices.size() == 0) {
-      throw new RuntimeException("There are no capture devices connected to " +
-                                 "this computer.\n");
-    }
-  }
-
-
-  protected boolean validRes(String res) {
-    int[] size = getSize(res);
-    String fps = getFrameRate(res);
-    return (reqWidth == 0 || reqHeight == 0 ||
-            (size[0] == reqWidth && size[1] == reqHeight)) &&
-           (frameRateString.equals("") || frameRateString.equals(fps));
-  }
-
-
+  
+  
   ////////////////////////////////////////////////////////////
 
   // Initialization methods.
 
 
-  // The main initialization here.
-  protected void initGStreamer(PApplet parent, int rw, int rh, String src,
-                               String idName, Object idValue,
-                               String fps) {
+  protected void initGStreamer(PApplet parent) {
     this.parent = parent;
+    pipe = null;
 
     Video.init();
-    checkValidDevices(src);
 
-    // register methods
-    parent.registerMethod("dispose", this);
-    parent.registerMethod("post", this);
 
-    setEventHandlerObject(parent);
+    Element srcElement = null;
+    if (device == null) {
 
-    pipeline = new Pipeline("Video Capture");
+      // use the default device from GStreamer
+      srcElement = ElementFactory.make("autovideosrc", null);
 
-    frameRateString = fps;
-    if (frameRateString.equals("")) {
-      frameRate = -1;
-    } else {
-      String[] parts = frameRateString.split("/");
-      if (parts.length == 2) {
-        int fpsDenominator = PApplet.parseInt(parts[0]);
-        int fpsNumerator = PApplet.parseInt(parts[1]);
-        frameRate = (float)fpsDenominator / (float)fpsNumerator;
-      } else if (parts.length == 1) {
-        frameRateString += "/1";
-        frameRate = PApplet.parseFloat(parts[0]);
-      } else {
-        frameRateString = "";
-        frameRate = -1;
+    } else if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
+
+      // look for device
+      if (devices == null) {
+        DeviceMonitor monitor = DeviceMonitor.createNew();
+        monitor.addFilter("Video/Source", null);
+        devices = monitor.getDevices();
       }
+
+      for (int i=0; i < devices.size(); i++) {
+        if (devices.get(i).getDisplayName().equals(device)) {
+          // found device
+          srcElement = devices.get(i).createElement(null);
+          break;
+        }
+      }
+
+      // error out if we got passed an invalid device name
+      if (srcElement == null) {
+        throw new RuntimeException("Could not find device " + device);
+      }
+
+    } else if (PApplet.platform == MACOSX) {
+
+      // use numeric index
+      srcElement = ElementFactory.make("avfvideosrc", null);
+      srcElement.set("device-index", Integer.parseInt(device));
+
+    } else {
+
+       // unused fallback
+       srcElement = ElementFactory.make("autovideosrc", null);
+
     }
 
-    reqWidth = rw;
-    reqHeight = rh;
 
-    sourceName = src;
-    sourceElement = ElementFactory.make(src, "Source");
+    pipe = new Pipeline();
 
-    if (idName != null && !idName.equals("")) {
-      sourceElement.set(idName, idValue);
+    Element videoscale = ElementFactory.make("videoscale", null);
+    Element videoconvert = ElementFactory.make("videoconvert", null);
+    Element capsfilter = ElementFactory.make("capsfilter", null);
+
+    String frameRateString;
+    if (frameRate != 0.0) {
+      frameRateString = ", framerate=" + fpsToFramerate(frameRate);
+    } else {
+      frameRateString = "";
     }
+    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
 
-    bufWidth = bufHeight = 0;
-    pipelineReady = false;
+    rgbSink = new AppSink("sink");
+    rgbSink.set("emit-signals", true);
+    newSampleListener = new NewSampleListener();
+    rgbSink.connect(newSampleListener);
+    // XXX: unsure about BGRx
+    rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+
+    pipe.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+    pipe.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+
+    makeBusConnections(pipe.getBus());
+
+
+    try {
+      // register methods
+      parent.registerMethod("dispose", this);
+      parent.registerMethod("post", this);
+
+      setEventHandlerObject(parent);
+
+      rate = 1.0f;
+      volume = -1;
+      sinkReady = false;
+      bufWidth = bufHeight = 0;
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
 
-  protected void initPipeline() {
-    String whStr = "";
-    if (0 < reqWidth && 0 < reqHeight) {
-      whStr = "width=" + reqWidth + ", height=" + reqHeight;
+  public static String fpsToFramerate(float fps) {
+    String formatted = Float.toString(fps);
+    // this presumes the delimitter is always a dot
+    int i = formatted.indexOf('.');
+    if (Math.floor(fps) != fps) {
+      int denom = (int)Math.pow(10, formatted.length()-i-1);
+      int num = (int)(fps * denom);
+      return num + "/" + denom;
     } else {
-      PGraphics.showWarning("Resolution information not available, attempting" +
-                            " to open the capture device at 320x240");
-      whStr = "width=320, height=240";
+      return (int)fps + "/1";
     }
-
-    String fpsStr = "";
-    if (!frameRateString.equals("")) {
-      // If the framerate string is empty we left the source element
-      // to use the default value.
-      fpsStr = ", framerate=" + frameRateString;
-    }
-
-    if (bufferSink != null || (Video.useGLBufferSink && parent.g.isGL())) {
-      useBufferSink = true;
-
-      if (bufferSink != null) {
-        getSinkMethods();
-      }
-
-      if (copyMask == null || copyMask.equals("")) {
-        initCopyMask();
-      }
-
-      String caps = whStr + fpsStr + ", " + copyMask;
-
-      natSink = new BufferDataAppSink("nat", caps,
-          new BufferDataAppSink.Listener() {
-            public void bufferFrame(int w, int h, Buffer buffer) {
-              invokeEvent(w, h, buffer);
-            }
-          });
-
-      natSink.setAutoDisposeBuffer(false);
-
-      // No need for rgbSink.dispose(), because the addMany() doesn't increment the
-      // refcount of the videoSink object.
-
-      pipeline.addMany(sourceElement, natSink);
-      Element.linkMany(sourceElement, natSink);
-
-    } else {
-      Element conv = ElementFactory.make("ffmpegcolorspace", "ColorConverter");
-
-      Element videofilter = ElementFactory.make("capsfilter", "ColorFilter");
-      videofilter.setCaps(new Caps("video/x-raw-rgb, width=" + reqWidth +
-                                   ", height=" + reqHeight +
-                                   ", bpp=32, depth=24" + fpsStr));
-
-      rgbSink = new RGBDataAppSink("rgb",
-          new RGBDataAppSink.Listener() {
-            public void rgbFrame(int w, int h, IntBuffer buffer) {
-              invokeEvent(w, h, buffer);
-            }
-          });
-
-      // Setting direct buffer passing in the video sink.
-      rgbSink.setPassDirectBuffer(Video.passDirectBuffer);
-
-      // No need for rgbSink.dispose(), because the addMany() doesn't increment
-      // the refcount of the videoSink object.
-
-      pipeline.addMany(sourceElement, conv, videofilter, rgbSink);
-      Element.linkMany(sourceElement, conv, videofilter, rgbSink);
-    }
-
-    pipelineReady = true;
-    newFrame = false;
   }
 
 
   /**
-   * Uses a generic object as handler of the capture. This object should have a
-   * captureEvent method that receives a Capture argument. This method will
+   * Uses a generic object as handler of the movie. This object should have a
+   * movieEvent method that receives a GSMovie argument. This method will
    * be called upon a new frame read event.
    *
    */
@@ -982,38 +850,65 @@ public class Capture extends PImage implements PConstants {
     eventHandler = obj;
 
     try {
-      captureEventMethod = obj.getClass().getMethod("captureEvent", Capture.class);
+      movieEventMethod = eventHandler.getClass().getMethod("captureEvent", Capture.class);
       return;
     } catch (Exception e) {
-      // no such method, or an error.. which is fine, just ignore
+      // no such method, or an error... which is fine, just ignore
     }
 
-    // The captureEvent method may be declared as receiving Object, rather
-    // than Capture.
+    // movieEvent can alternatively be defined as receiving an Object, to allow
+    // Processing mode implementors to support the video library without linking
+    // to it at build-time.
     try {
-      captureEventMethod = obj.getClass().getMethod("captureEvent", Object.class);
-      return;
+      movieEventMethod = eventHandler.getClass().getMethod("captureEvent", Object.class);
     } catch (Exception e) {
-      // no such method, or an error.. which is fine, just ignore
+      // no such method, or an error... which is fine, just ignore
     }
   }
 
+
+  protected void initSink() {
+    pipe.setState(org.freedesktop.gstreamer.State.READY);
+    sinkReady = true;
+    newFrame = false;
+  }
+
+  
+  private void makeBusConnections(Bus bus) {
+    bus.connect(new Bus.ERROR() {
+
+        public void errorMessage(GstObject arg0, int arg1, String arg2) {
+            System.err.println(arg0 + " : " + arg2);
+        }
+    });
+    bus.connect(new Bus.EOS() {
+
+        public void endOfStream(GstObject arg0) {
+            try {
+                if (repeat) {
+                  pipe.seek(0, TimeUnit.NANOSECONDS);
+                } else {
+                    stop();
+                }
+            } catch (Exception ex) {
+              ex.printStackTrace();
+            }
+        }
+    });
+  }
+
+  
 
   ////////////////////////////////////////////////////////////
 
   // Stream event handling.
 
 
-  /**
-   * invokeEvent() and read() are synchronized so that they can not be
-   * called simultaneously. when they were not synchronized, this caused
-   * the infamous problematic frame crash.
-   * found and fixed by Charl P. Botha <charlbotha.com>
-   */
   protected synchronized void invokeEvent(int w, int h, IntBuffer buffer) {
     available = true;
     bufWidth = w;
     bufHeight = h;
+
     if (copyPixels == null) {
       copyPixels = new int[w * h];
     }
@@ -1025,35 +920,58 @@ public class Capture extends PImage implements PConstants {
       copyPixels = null;
       return;
     }
-    fireCaptureEvent();
-  }
 
+    if (playing) {
+      fireMovieEvent();
+    }
+  }
 
   protected synchronized void invokeEvent(int w, int h, Buffer buffer) {
     available = true;
     bufWidth = w;
     bufHeight = h;
     if (natBuffer != null) {
-      // To handle the situation where read() is not called in the sketch,
-      // so that the native buffers are not being sent to the sink,
-      // and therefore, not disposed by it.
-      natBuffer.dispose();
+      // To handle the situation where read() is not called in the sketch, so 
+      // that the native buffers are not being sent to the sinke, and therefore, not disposed
+      // by it.
+      natBuffer.dispose(); 
     }
     natBuffer = buffer;
-    fireCaptureEvent();
+
+    if (playing) {
+      fireMovieEvent();
+    }
   }
 
-
-  private void fireCaptureEvent() {
-    if (captureEventMethod != null) {
+  private void fireMovieEvent() {
+    // Creates a movieEvent.
+    if (movieEventMethod != null) {
       try {
-        captureEventMethod.invoke(eventHandler, this);
-
+        movieEventMethod.invoke(eventHandler, this);
       } catch (Exception e) {
         System.err.println("error, disabling captureEvent()");
         e.printStackTrace();
-        captureEventMethod = null;
+        movieEventMethod = null;
       }
+    }
+  }
+
+  protected void eosEvent() {
+    if (repeat) {
+      if (0 < rate) {
+        // Playing forward, so we return to the beginning
+        jump(0);
+      } else {
+        // Playing backwards, so we go to the end.
+        jump(duration());
+      }
+
+      // The rate is set automatically to 1 when restarting the
+      // stream, so we need to call frameRate in order to reset
+      // to the latest fps rate.
+      frameRate(frameRate);
+    } else {
+      playing = false;
     }
   }
 
@@ -1063,69 +981,47 @@ public class Capture extends PImage implements PConstants {
   // Stream query methods.
 
 
-  protected float getSourceFrameRate() {
-    for (Element sink : pipeline.getSinks()) {
-      for (Pad pad : sink.getPads()) {
-        Fraction frameRate = org.gstreamer.Video.getVideoFrameRate(pad);
-        if (frameRate != null) {
-          return (float)frameRate.toDouble();
-        }
-      }
-    }
-    return 0;
-  }
+  /**
+   * Get the height of the source video. Note: calling this method repeatedly
+   * can slow down playback performance.
+   *
+   * @return int
+   */
+//  protected int getSourceHeight() {
+//    Dimension dim = pipe.getVideoSize();
+//    if (dim != null) {
+//      return dim.height;
+//    } else {
+//      return 0;
+//    }
+//  }
 
 
-  protected String getName(String config) {
-    String name = "";
-    String[] parts = PApplet.split(config, ',');
-    for (String part: parts) {
-      if (-1 < part.indexOf("name")) {
-        String[] values = PApplet.split(part, '=');
-        if (0 < values.length) {
-          name = values[1];
-        }
-      }
-    }
-    return name;
-  }
+  /**
+   * Get the original framerate of the source video. Note: calling this method
+   * repeatedly can slow down playback performance.
+   *
+   * @return float
+   */
+//  protected float getSourceFrameRate() {
+//    return (float)pipe.getVideoSinkFrameRate();
+//  }
 
 
-  protected int[] getSize(String config) {
-    int[] wh = {0, 0};
-    String[] parts = PApplet.split(config, ',');
-    for (String part: parts) {
-      if (-1 < part.indexOf("size")) {
-        String[] values = PApplet.split(part, '=');
-        if (0 < values.length) {
-          String[] whstr = PApplet.split(values[1], 'x');
-          if (whstr.length == 2) {
-            wh[0] = PApplet.parseInt(whstr[0]);
-            wh[1] = PApplet.parseInt(whstr[1]);
-          }
-        }
-      }
-    }
-    return wh;
-  }
-
-
-  protected String getFrameRate(String config) {
-    String fps = "";
-    String[] parts = PApplet.split(config, ',');
-    for (String part: parts) {
-      if (-1 < part.indexOf("fps")) {
-        String[] values = PApplet.split(part, '=');
-        if (0 < values.length) {
-          fps = values[1];
-          if (fps.indexOf("/") == -1) {
-            fps += "/1";
-          }
-        }
-      }
-    }
-    return fps;
-  }
+  /**
+   * Get the width of the source video. Note: calling this method repeatedly
+   * can slow down playback performance.
+   *
+   * @return int
+   */
+//  protected int getSourceWidth() {
+//    Dimension dim = pipe.getVideoSize();
+//    if (dim != null) {
+//      return dim.width;
+//    } else {
+//      return 0;
+//    }
+//  }
 
 
   ////////////////////////////////////////////////////////////
@@ -1137,7 +1033,7 @@ public class Capture extends PImage implements PConstants {
    * Sets the object to use as destination for the frames read from the stream.
    * The color conversion mask is automatically set to the one required to
    * copy the frames to OpenGL.
-   *
+   * 
    * NOTE: This is not official API and may/will be removed at any time.
    *
    * @param Object dest
@@ -1183,8 +1079,8 @@ public class Capture extends PImage implements PConstants {
       sinkCopyMethod = bufferSink.getClass().getMethod("copyBufferFromSource",
         new Class[] { Object.class, ByteBuffer.class, int.class, int.class });
     } catch (Exception e) {
-      throw new RuntimeException("Capture: provided sink object doesn't have " +
-                                 "a copyBufferFromSource method.");
+      throw new RuntimeException("Movie: provided sink object doesn't have a " +
+                                 "copyBufferFromSource method.");
     }
 
     try {
@@ -1192,25 +1088,25 @@ public class Capture extends PImage implements PConstants {
         new Class[] { Object.class });
       sinkSetMethod.invoke(bufferSink, new Object[] { this });
     } catch (Exception e) {
-      throw new RuntimeException("Capture: provided sink object doesn't have "+
-                                 "a setBufferSource method.");
+      throw new RuntimeException("Movie: provided sink object doesn't have a " +
+                                 "setBufferSource method.");
     }
-
+    
     try {
-      sinkDisposeMethod = bufferSink.getClass().getMethod("disposeSourceBuffer",
+      sinkDisposeMethod = bufferSink.getClass().getMethod("disposeSourceBuffer", 
         new Class[] { });
     } catch (Exception e) {
-      throw new RuntimeException("Capture: provided sink object doesn't have " +
+      throw new RuntimeException("Movie: provided sink object doesn't have " +
                                  "a disposeSourceBuffer method.");
     }
-
+        
     try {
-      sinkGetMethod = bufferSink.getClass().getMethod("getBufferPixels",
+      sinkGetMethod = bufferSink.getClass().getMethod("getBufferPixels", 
         new Class[] { int[].class });
     } catch (Exception e) {
-      throw new RuntimeException("Capture: provided sink object doesn't have " +
+      throw new RuntimeException("Movie: provided sink object doesn't have " +
                                  "a getBufferPixels method.");
-    }
+    }    
   }
 
 
@@ -1219,10 +1115,10 @@ public class Capture extends PImage implements PConstants {
       copyMask = "red_mask=(int)0xFF000000, green_mask=(int)0xFF0000, blue_mask=(int)0xFF00";
     } else {
       copyMask = "red_mask=(int)0xFF, green_mask=(int)0xFF00, blue_mask=(int)0xFF0000";
-    }
-  }
-
-
+    }    
+  }    
+  
+  
   public synchronized void post() {
     if (useBufferSink && sinkDisposeMethod != null) {
       try {
@@ -1232,4 +1128,108 @@ public class Capture extends PImage implements PConstants {
       }
     }
   }
+
+  /**
+   *  Returns a list of all capture devices
+   *  @return array of device names
+   */
+  static public String[] list() {
+    Video.init();
+
+    String[] out;
+    if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
+
+      DeviceMonitor monitor = DeviceMonitor.createNew();
+      monitor.addFilter("Video/Source", null);
+      devices = monitor.getDevices();
+
+      out = new String[devices.size()];
+      for (int i=0; i < devices.size(); i++) {
+        Device dev = devices.get(i);
+        out[i] = dev.getDisplayName();
+      }
+
+    } else {
+
+      // device enumeration is currently not supported on macOS
+      out = new String[1];
+      out[0] = "0";
+      System.err.println("Device enumeration is currently not supported on your platform.");
+
+    }
+
+    return out;
+  }
+
+  private class NewSampleListener implements AppSink.NEW_SAMPLE {
+
+    @Override
+    public FlowReturn newSample(AppSink sink) {
+      Sample sample = sink.pullSample();
+      Structure capsStruct = sample.getCaps().getStructure(0);
+      int w = capsStruct.getInteger("width");
+      int h = capsStruct.getInteger("height");
+      Buffer buffer = sample.getBuffer();
+      ByteBuffer bb = buffer.map(false);
+      if (bb != null) {
+        // If the EDT is still copying data from the buffer, just drop this frame
+        if (!bufferLock.tryLock()) {
+          return FlowReturn.OK;
+        }
+        IntBuffer rgb = bb.asIntBuffer();
+        
+        available = true;
+        bufWidth = w;
+        bufHeight = h;        
+//        System.out.println("got a frame " + w + " " + h + " " + playing);
+        if (copyPixels == null) {
+          copyPixels = new int[w * h];
+        }
+        
+        try {
+          rgb.get(copyPixels, 0, width * height);
+          if (playing) {
+            fireMovieEvent();
+          }          
+          
+        } finally {
+          bufferLock.unlock();
+        }        
+        
+        buffer.unmap();
+      }
+      sample.dispose();
+      return FlowReturn.OK;
+    }
+
+  }
+
+  /*
+  private class NewPrerollListener implements AppSink.NEW_PREROLL {
+    @Override
+    public void newPreroll(AppSink sink) {
+        surfaceLock.lock();
+        Sample sample = sink.pullPreroll();
+        Structure capsStruct = sample.getCaps().getStructure(0);
+        int width = capsStruct.getInteger("width");
+        int height = capsStruct.getInteger("height");
+        try {
+            if (surface == null || surface.getWidth() != width || surface.getHeight() != height) {
+                if (surface != null && surface.sample != null) {
+                    surface.sample.dispose();
+                }
+                surface = new GStreamerSurface(width, height);
+            } else {
+                if (surface.sample != null) {
+                    surface.sample.dispose();
+                }
+            }
+            surface.sample = sample;
+            surface.modCount++;
+        } finally {
+            surfaceLock.unlock();
+        }
+    }
+  }
+  */
 }

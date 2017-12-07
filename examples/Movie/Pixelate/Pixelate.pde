@@ -15,9 +15,9 @@ Movie mov;
 color movColors[];
 
 void setup() {
-  size(640, 360);
+  size(560, 406);
   noStroke();
-  mov = new Movie(this, "transit.mov");
+  mov = new Movie(this, "launch2.mp4");
   mov.loop();
   numPixelsWide = width / blockSize;
   numPixelsHigh = height / blockSize;
@@ -48,4 +48,3 @@ void draw() {
   }
 
 }
-

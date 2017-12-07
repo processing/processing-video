@@ -17,9 +17,9 @@ boolean speedSet = false;
 boolean once = true;
 
 void setup() {
-  size(640, 360);
+  size(560, 406);
   background(0);
-  mov = new Movie(this, "transit.mkv");
+  mov = new Movie(this, "launch2.mp4");
   mov.play();
 }
 
@@ -44,5 +44,4 @@ void draw() {
     mov.play();
   }
   image(mov, 0, 0, width, height);
-}   
-
+}

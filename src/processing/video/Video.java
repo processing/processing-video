@@ -23,7 +23,7 @@
 
 package processing.video;
 
-import org.gstreamer.*;
+import org.freedesktop.gstreamer.*;
 import processing.core.PApplet;
 import processing.core.PConstants;
 
@@ -123,30 +123,46 @@ public class Video implements PConstants {
         System.err.println("Cannot load local version of GStreamer libraries.");
       }
     }
-    
+
+    // disable the use of gst-plugin-scanner on environments where we're
+    // not using the host system's installation of GStreamer
+    // the problem with gst-plugin-scanner is that the library expects it
+    // to exist at a specific location determinated at build time
+    if (PApplet.platform != LINUX) {
+      Environment.libc.setenv("GST_REGISTRY_FORK", "no", 1);
+    }
+
+    // prevent globally installed libraries from being used on platforms
+    // where we ship GStreamer
+    if (PApplet.platform == WINDOWS || PApplet.platform == MACOSX) {
+      Environment.libc.setenv("GST_PLUGIN_SYSTEM_PATH_1_0", "", 1);
+    }
+
     String[] args = { "" };
     Gst.setUseDefaultContext(defaultGLibContext);
     Gst.init("Processing core video", args);
 
+    // instead of setting the plugin path via scanPath(), we could alternatively
+    // also set the GST_PLUGIN_PATH_1_0 environment variable
     addPlugins();
   }
 
   
   static protected void addPlugins() {
     if (!gstreamerPluginPath.equals("")) {
-      Registry reg = Registry.getDefault();
+      Registry reg = Registry.get();
       boolean res;
       res = reg.scanPath(gstreamerPluginPath);
       if (!res) {
-        System.err.println("Cannot load GStreamer plugins from " + 
+        System.err.println("Cannot load GStreamer plugins from " +
                            gstreamerPluginPath);
       }
-    }       
+    }
   }
   
   
   static protected void removePlugins() {
-    Registry reg = Registry.getDefault();
+    Registry reg = Registry.get();
     List<Plugin> list = reg.getPluginList();
     for (Plugin plg : list) {
       reg.removePlugin(plg);
@@ -155,10 +171,8 @@ public class Video implements PConstants {
   
   
   static protected void buildLinuxPaths() {
-    // the version of the JNA library bundled automatically tries
-    // all library paths known to the host system's ldconfig
-    // so we'd even catch locations like /usr/local/lib etc
-    // PR for upstream: https://github.com/twall/jna/pull/478
+    // JNA automatically tries all library paths known to the host system's
+    // ldconfig, so we'd even catch locations like /usr/local/lib etc
     gstreamerLibPath = "";
     gstreamerPluginPath = "";
   }
@@ -167,16 +181,16 @@ public class Video implements PConstants {
   static protected void buildWindowsPaths() {
     LibraryPath libPath = new LibraryPath();
     String path = libPath.get();
-    gstreamerLibPath = buildGStreamerLibPath(path, "\\windows" + bitsJVM);
-    gstreamerPluginPath = gstreamerLibPath + "\\plugins";
+    gstreamerLibPath = buildGStreamerLibPath(path, "windows" + bitsJVM);
+    gstreamerPluginPath = gstreamerLibPath + "\\gstreamer-1.0";
   }
 
   
   static protected void buildMacOSXPaths() {
     LibraryPath libPath = new LibraryPath();
-    String path = libPath.get();        
-    gstreamerLibPath = buildGStreamerLibPath(path, "/macosx" + bitsJVM);
-    gstreamerPluginPath = gstreamerLibPath + "/plugins";
+    String path = libPath.get();
+    gstreamerLibPath = buildGStreamerLibPath(path, "macosx" + bitsJVM);
+    gstreamerPluginPath = gstreamerLibPath + "/gstreamer-1.0";
   }
 
   
