@@ -1,2 +1,6 @@
 bin
 /dist
+/**/.DS_Store
+/library/macosx*
+/library/windows*
+/library/linux*
