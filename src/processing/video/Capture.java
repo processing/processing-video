@@ -89,7 +89,7 @@ public class Capture extends PImage implements PConstants {
   protected Method sinkCopyMethod;
   protected Method sinkSetMethod;
   protected Method sinkDisposeMethod;
-  protected Method sinkGetMethod;  
+  protected Method sinkGetMethod;
   protected String copyMask;
   protected Buffer natBuffer = null;
 //  protected BufferDataAppSink natSink = null;
@@ -171,7 +171,7 @@ public class Capture extends PImage implements PConstants {
 
   /**
    * Disposes all the native resources associated to this movie.
-   * 
+   *
    * NOTE: This is not official API and may/will be removed at any time.
    */
   public void dispose() {
@@ -194,15 +194,15 @@ public class Capture extends PImage implements PConstants {
       pipe.getState();
       pipe.getBus().dispose();
       pipe.dispose();
-      
-      
+
+
 //      copyPixels = null;
 //      if (rgbSink != null) {
 //        rgbSink.removeListener();
 //        rgbSink.dispose();
 //        rgbSink = null;
 //      }
-      
+
 //      natBuffer = null;
 //      if (natSink != null) {
 //        natSink.removeListener();
@@ -212,10 +212,10 @@ public class Capture extends PImage implements PConstants {
 
 //      playbin.dispose();
 //      playbin = null;
-      
+
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
-      parent.unregisterMethod("post", this);      
+      parent.unregisterMethod("post", this);
     }
   }
 
@@ -370,7 +370,7 @@ public class Capture extends PImage implements PConstants {
    * @brief Jumps to a specific location
    */
   public void jump(float where) {
-    
+
 //    if (seeking) return;
 //
 //    if (!sinkReady) {
@@ -397,7 +397,7 @@ public class Capture extends PImage implements PConstants {
     // (like seek in this case) has completed
 //    seeking = true;
 //    pipe.getState();
-//    seeking = false;    
+//    seeking = false;
     /*
     if (seeking) return; // don't seek again until the current seek operation is done.
 
@@ -406,12 +406,12 @@ public class Capture extends PImage implements PConstants {
     }
 
     // Round the time to a multiple of the source framerate, in
-    // order to eliminate stutter. Suggested by Daniel Shiffman    
+    // order to eliminate stutter. Suggested by Daniel Shiffman
     float fps = getSourceFrameRate();
     int frame = (int)(where * fps);
     final float seconds = frame / fps;
-    
-    // Put the seek operation inside a thread to avoid blocking the main 
+
+    // Put the seek operation inside a thread to avoid blocking the main
     // animation thread
     Thread seeker = new Thread() {
       @Override
@@ -427,10 +427,10 @@ public class Capture extends PImage implements PConstants {
         // (like seek in this case) has completed
         seeking = true;
         playbin.getState();
-        seeking = false;        
+        seeking = false;
       }
     };
-    seeker.start();    
+    seeker.start();
     */
   }
 
@@ -594,7 +594,7 @@ public class Capture extends PImage implements PConstants {
 //      // Idem for volume
 //      volume = (float)playbin.getVolume();
 //    }
-//  
+//
 //    if (copyPixels == null) {
 //      return;
 //    }
@@ -607,8 +607,8 @@ public class Capture extends PImage implements PConstants {
     int[] temp = pixels;
     pixels = copyPixels;
     updatePixels();
-    copyPixels = temp;    
-    
+    copyPixels = temp;
+
 /*
     if (useBufferSink) { // The native buffer from gstreamer is copied to the buffer sink.
       outdatedPixels = true;
@@ -676,7 +676,7 @@ public class Capture extends PImage implements PConstants {
 
   public synchronized void loadPixels() {
     super.loadPixels();
-    
+
     if (useBufferSink) {
       /*
       if (natBuffer != null) {
@@ -686,7 +686,7 @@ public class Capture extends PImage implements PConstants {
         IntBuffer buf = natBuffer.getByteBuffer().asIntBuffer();
         buf.rewind();
         buf.get(pixels);
-        Video.convertToARGB(pixels, width, height);        
+        Video.convertToARGB(pixels, width, height);
       } else if (sinkGetMethod != null) {
         try {
           // sinkGetMethod will copy the latest buffer to the pixels array,
@@ -695,10 +695,10 @@ public class Capture extends PImage implements PConstants {
           sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
         } catch (Exception e) {
           e.printStackTrace();
-        }        
+        }
       }
       */
-      
+
       try {
         // sinkGetMethod will copy the latest buffer to the pixels array,
         // and the pixels will be copied to the texture when the OpenGL
@@ -706,19 +706,19 @@ public class Capture extends PImage implements PConstants {
         sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
       } catch (Exception e) {
         e.printStackTrace();
-      }    
-      
+      }
+
       outdatedPixels = false;
     }
   }
-  
-  
+
+
   public int get(int x, int y) {
     if (outdatedPixels) loadPixels();
     return super.get(x, y);
   }
-  
-  
+
+
   protected void getImpl(int sourceX, int sourceY,
                          int sourceWidth, int sourceHeight,
                          PImage target, int targetX, int targetY) {
@@ -726,8 +726,8 @@ public class Capture extends PImage implements PConstants {
     super.getImpl(sourceX, sourceY, sourceWidth, sourceHeight,
                   target, targetX, targetY);
   }
-  
-  
+
+
   ////////////////////////////////////////////////////////////
 
   // Initialization methods.
@@ -804,7 +804,7 @@ public class Capture extends PImage implements PConstants {
     rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
 
     pipe.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
-    pipe.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+    Pipeline.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
 
     makeBusConnections(pipe.getBus());
 
@@ -873,7 +873,7 @@ public class Capture extends PImage implements PConstants {
     newFrame = false;
   }
 
-  
+
   private void makeBusConnections(Bus bus) {
     bus.connect(new Bus.ERROR() {
 
@@ -897,7 +897,7 @@ public class Capture extends PImage implements PConstants {
     });
   }
 
-  
+
 
   ////////////////////////////////////////////////////////////
 
@@ -931,10 +931,10 @@ public class Capture extends PImage implements PConstants {
     bufWidth = w;
     bufHeight = h;
     if (natBuffer != null) {
-      // To handle the situation where read() is not called in the sketch, so 
+      // To handle the situation where read() is not called in the sketch, so
       // that the native buffers are not being sent to the sinke, and therefore, not disposed
       // by it.
-      natBuffer.dispose(); 
+      natBuffer.dispose();
     }
     natBuffer = buffer;
 
@@ -1033,7 +1033,7 @@ public class Capture extends PImage implements PConstants {
    * Sets the object to use as destination for the frames read from the stream.
    * The color conversion mask is automatically set to the one required to
    * copy the frames to OpenGL.
-   * 
+   *
    * NOTE: This is not official API and may/will be removed at any time.
    *
    * @param Object dest
@@ -1091,22 +1091,22 @@ public class Capture extends PImage implements PConstants {
       throw new RuntimeException("Movie: provided sink object doesn't have a " +
                                  "setBufferSource method.");
     }
-    
+
     try {
-      sinkDisposeMethod = bufferSink.getClass().getMethod("disposeSourceBuffer", 
+      sinkDisposeMethod = bufferSink.getClass().getMethod("disposeSourceBuffer",
         new Class[] { });
     } catch (Exception e) {
       throw new RuntimeException("Movie: provided sink object doesn't have " +
                                  "a disposeSourceBuffer method.");
     }
-        
+
     try {
-      sinkGetMethod = bufferSink.getClass().getMethod("getBufferPixels", 
+      sinkGetMethod = bufferSink.getClass().getMethod("getBufferPixels",
         new Class[] { int[].class });
     } catch (Exception e) {
       throw new RuntimeException("Movie: provided sink object doesn't have " +
                                  "a getBufferPixels method.");
-    }    
+    }
   }
 
 
@@ -1115,10 +1115,10 @@ public class Capture extends PImage implements PConstants {
       copyMask = "red_mask=(int)0xFF000000, green_mask=(int)0xFF0000, blue_mask=(int)0xFF00";
     } else {
       copyMask = "red_mask=(int)0xFF, green_mask=(int)0xFF00, blue_mask=(int)0xFF0000";
-    }    
-  }    
-  
-  
+    }
+  }
+
+
   public synchronized void post() {
     if (useBufferSink && sinkDisposeMethod != null) {
       try {
@@ -1177,25 +1177,25 @@ public class Capture extends PImage implements PConstants {
           return FlowReturn.OK;
         }
         IntBuffer rgb = bb.asIntBuffer();
-        
+
         available = true;
         bufWidth = w;
-        bufHeight = h;        
+        bufHeight = h;
 //        System.out.println("got a frame " + w + " " + h + " " + playing);
         if (copyPixels == null) {
           copyPixels = new int[w * h];
         }
-        
+
         try {
           rgb.get(copyPixels, 0, width * height);
           if (playing) {
             fireMovieEvent();
-          }          
-          
+          }
+
         } finally {
           bufferLock.unlock();
-        }        
-        
+        }
+
         buffer.unmap();
       }
       sample.dispose();
