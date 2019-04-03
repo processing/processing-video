@@ -20,7 +20,7 @@
 	   srcdir="src" destdir="bin" 
 	   encoding="UTF-8"
 	   includeAntRuntime="false"
-	   classpath="${core.classpath.location}/core.jar; library/gst1-java-core-0.9.1.jar; library/jna.jar"
+	   classpath="${core.classpath.location}/core.jar; library/gst1-java-core-1.0.0-beta-2.jar; library/jna.jar"
 	   nowarn="true">
       <compilerclasspath path="${compiler.classpath.location}/org.eclipse.jdt.core.jar; 
                                ${compiler.classpath.location}/jdtCompilerAdapter.jar" />

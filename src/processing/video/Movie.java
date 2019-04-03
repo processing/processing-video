@@ -30,6 +30,7 @@ import java.awt.Dimension;
 import java.io.*;
 import java.net.URI;
 import java.nio.*;
+import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -38,6 +39,8 @@ import java.lang.reflect.*;
 import org.freedesktop.gstreamer.*;
 import org.freedesktop.gstreamer.Buffer;
 import org.freedesktop.gstreamer.elements.*;
+import org.freedesktop.gstreamer.event.SeekFlags;
+import org.freedesktop.gstreamer.event.SeekType;
 
 
 /**
@@ -55,6 +58,8 @@ import org.freedesktop.gstreamer.elements.*;
 public class Movie extends PImage implements PConstants {
   public static String[] supportedProtocols = { "http" };
 
+  protected int nativeWidth;
+  protected int nativeHeight;
   protected float nativeFrameRate;    // the file's native fps
   public float frameRate;             // the current playback fps
   protected float rate;               // speed multiplier (1.0: frameRate = nativeFrameRate)
@@ -212,8 +217,10 @@ public class Movie extends PImage implements PConstants {
       stop = t;
     }
 
-    res = playbin.seek(rate * f, Format.TIME, SeekFlags.FLUSH,
-                       SeekType.SET, start, SeekType.SET, stop);
+    res = playbin.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
+    
+    
+    
     playbin.getState();
 
     if (!res) {
@@ -267,8 +274,8 @@ public class Movie extends PImage implements PConstants {
    * @brief Returns length of movie in seconds
    */
   public float duration() {
-    float sec = playbin.queryDuration().toSeconds();
-    float nanosec = playbin.queryDuration().getNanoSeconds();
+    float sec = playbin.queryDuration(TimeUnit.SECONDS);
+    float nanosec = playbin.queryDuration(TimeUnit.NANOSECONDS);
     return sec + Video.nanoSecToSecFrac(nanosec);
   }
 
@@ -286,8 +293,8 @@ public class Movie extends PImage implements PConstants {
    * @brief Returns location of playback head in units of seconds
    */
   public float time() {
-    float sec = playbin.queryPosition().toSeconds();
-    float nanosec = playbin.queryPosition().getNanoSeconds();
+    float sec = playbin.queryDuration(TimeUnit.SECONDS);
+    float nanosec = playbin.queryDuration(TimeUnit.NANOSECONDS);
     return sec + Video.nanoSecToSecFrac(nanosec);
   }
 
@@ -323,8 +330,7 @@ public class Movie extends PImage implements PConstants {
     boolean res;
     long pos = Video.secToNanoLong(where);
 
-    res = playbin.seek(rate, Format.TIME, SeekFlags.FLUSH,
-                       SeekType.SET, pos, SeekType.NONE, -1);
+    res = playbin.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, pos, SeekType.NONE, -1);
 
     if (!res) {
       PGraphics.showWarning("Seek operation failed.");
@@ -909,12 +915,13 @@ public class Movie extends PImage implements PConstants {
    * @return int
    */
   protected int getSourceHeight() {
-    Dimension dim = playbin.getVideoSize();
-    if (dim != null) {
-      return dim.height;
-    } else {
-      return 0;
-    }
+//    Dimension dim = playbin.getVideoSize();
+//    if (dim != null) {
+//      return dim.height;
+//    } else {
+//      return 0;
+//    }
+    return nativeWidth;
   }
 
 
@@ -939,12 +946,13 @@ public class Movie extends PImage implements PConstants {
    * @return int
    */
   protected int getSourceWidth() {
-    Dimension dim = playbin.getVideoSize();
-    if (dim != null) {
-      return dim.width;
-    } else {
-      return 0;
-    }
+//    Dimension dim = playbin.getVideoSize();
+//    if (dim != null) {
+//      return dim.width;
+//    } else {
+//      return 0;
+//    }
+    return nativeHeight;
   }
 
 
@@ -1061,8 +1069,8 @@ public class Movie extends PImage implements PConstants {
 
       // pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
-      int w = capsStruct.getInteger("width");
-      int h = capsStruct.getInteger("height");
+      nativeWidth = capsStruct.getInteger("width");
+      nativeHeight = capsStruct.getInteger("height");
       Fraction fps = capsStruct.getFraction("framerate");
       nativeFrameRate = (float)fps.numerator / fps.denominator;
 
@@ -1082,10 +1090,10 @@ public class Movie extends PImage implements PConstants {
         IntBuffer rgb = bb.asIntBuffer();
         
         available = true;
-        bufWidth = w;
-        bufHeight = h;
+        bufWidth = nativeWidth;
+        bufHeight = nativeHeight;
         if (copyPixels == null) {
-          copyPixels = new int[w * h];
+          copyPixels = new int[nativeWidth * nativeHeight];
         }
         
         try {

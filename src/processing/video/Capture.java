@@ -33,6 +33,7 @@ import java.nio.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.EnumSet;
 import java.util.List;
 import java.lang.reflect.*;
 
@@ -40,6 +41,8 @@ import org.freedesktop.gstreamer.*;
 import org.freedesktop.gstreamer.Buffer;
 import org.freedesktop.gstreamer.device.*;
 import org.freedesktop.gstreamer.elements.*;
+import org.freedesktop.gstreamer.event.SeekFlags;
+import org.freedesktop.gstreamer.event.SeekType;
 
 
 /**
@@ -270,8 +273,7 @@ public class Capture extends PImage implements PConstants {
       stop = t;
     }
 
-    res = pipe.seek(rate * f, Format.TIME, SeekFlags.FLUSH,
-                       SeekType.SET, start, SeekType.SET, stop);
+    res = pipe.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
     pipe.getState();
 
     if (!res) {
@@ -330,8 +332,8 @@ public class Capture extends PImage implements PConstants {
    * @brief Returns length of movie in seconds
    */
   public float duration() {
-    float sec = pipe.queryDuration().toSeconds();
-    float nanosec = pipe.queryDuration().getNanoSeconds();
+    float sec = pipe.queryDuration(TimeUnit.SECONDS);
+    float nanosec = pipe.queryDuration(TimeUnit.NANOSECONDS);
     return sec + Video.nanoSecToSecFrac(nanosec);
   }
 
@@ -349,8 +351,8 @@ public class Capture extends PImage implements PConstants {
    * @brief Returns location of playback head in units of seconds
    */
   public float time() {
-    float sec = pipe.queryPosition().toSeconds();
-    float nanosec = pipe.queryPosition().getNanoSeconds();
+    float sec = pipe.queryDuration(TimeUnit.SECONDS);
+    float nanosec = pipe.queryDuration(TimeUnit.NANOSECONDS);
     return sec + Video.nanoSecToSecFrac(nanosec);
   }
 
@@ -750,9 +752,10 @@ public class Capture extends PImage implements PConstants {
 
       // look for device
       if (devices == null) {
-        DeviceMonitor monitor = DeviceMonitor.createNew();
+        DeviceMonitor monitor = new DeviceMonitor();
         monitor.addFilter("Video/Source", null);
         devices = monitor.getDevices();
+        monitor.close();
       }
 
       for (int i=0; i < devices.size(); i++) {
@@ -1139,9 +1142,10 @@ public class Capture extends PImage implements PConstants {
     String[] out;
     if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
 
-      DeviceMonitor monitor = DeviceMonitor.createNew();
+      DeviceMonitor monitor = new DeviceMonitor();
       monitor.addFilter("Video/Source", null);
       devices = monitor.getDevices();
+      monitor.close();
 
       out = new String[devices.size()];
       for (int i=0; i < devices.size(); i++) {
