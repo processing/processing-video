@@ -3,6 +3,7 @@
 /*
   Part of the Processing project - http://processing.org
 
+  Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2004-12 Ben Fry and Casey Reas
   The previous version of this code was developed by Hernando Barragan
 
@@ -26,7 +27,6 @@ package processing.video;
 
 import processing.core.*;
 
-import java.awt.Dimension;
 import java.io.*;
 import java.net.URI;
 import java.nio.*;
@@ -95,12 +95,9 @@ public class Movie extends PImage implements PConstants {
   protected Method sinkSetMethod;
   protected Method sinkDisposeMethod;
   protected Method sinkGetMethod;  
-  protected String copyMask;
-//  protected Buffer natBuffer = null;
-//  protected BufferDataAppSink natSink = null;
 
-  NewSampleListener newSampleListener;
-  NewPrerollListener newPrerollListener;
+  private NewSampleListener newSampleListener;
+  private NewPrerollListener newPrerollListener;
   private final Lock bufferLock = new ReentrantLock();
   
 
@@ -141,24 +138,6 @@ public class Movie extends PImage implements PConstants {
       playbin.getState();
       playbin.getBus().dispose();
       playbin.dispose();
-      
-      
-//      copyPixels = null;
-//      if (rgbSink != null) {
-//        rgbSink.removeListener();
-//        rgbSink.dispose();
-//        rgbSink = null;
-//      }
-      
-//      natBuffer = null;
-//      if (natSink != null) {
-//        natSink.removeListener();
-//        natSink.dispose();
-//        natSink = null;
-//      }
-
-//      playbin.dispose();
-//      playbin = null;
       
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
@@ -563,57 +542,6 @@ public class Movie extends PImage implements PConstants {
       updatePixels();
       copyPixels = temp;      
     }
-    
-    
-    
-        
-    
-/*
-    if (useBufferSink) { // The native buffer from gstreamer is copied to the buffer sink.
-      outdatedPixels = true;
-      if (natBuffer == null) {
-        return;
-      }
-
-      if (firstFrame) {
-        super.init(bufWidth, bufHeight, ARGB, 1);
-        firstFrame = false;
-      }
-
-      if (bufferSink == null) {
-        Object cache = parent.g.getCache(this);
-        if (cache == null) {
-          return;
-        }
-        setBufferSink(cache);
-        getSinkMethods();
-      }
-
-      ByteBuffer byteBuffer = natBuffer.getByteBuffer();
-
-      try {
-        sinkCopyMethod.invoke(bufferSink, new Object[] { natBuffer, byteBuffer, bufWidth, bufHeight });
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-
-      natBuffer = null;
-    } else { // The pixels just read from gstreamer are copied to the pixels array.
-      if (copyPixels == null) {
-        return;
-      }
-
-      if (firstFrame) {
-        super.init(bufWidth, bufHeight, RGB, 1);
-        firstFrame = false;
-      }
-
-      int[] temp = pixels;
-      pixels = copyPixels;
-      updatePixels();
-      copyPixels = temp;
-    }
-    */
 
     available = false;
     newFrame = true;
@@ -819,7 +747,6 @@ public class Movie extends PImage implements PConstants {
     } else {
       rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
     }
-    // if (useBufferSink) playbin.setVideoSink(bin); else
     playbin.setVideoSink(rgbSink);
 
     makeBusConnections(playbin.getBus());
@@ -863,47 +790,7 @@ public class Movie extends PImage implements PConstants {
 
   // Stream event handling.
 
-/*
-  protected synchronized void invokeEvent(int w, int h, IntBuffer buffer) {
-    available = true;
-    bufWidth = w;
-    bufHeight = h;
 
-    if (copyPixels == null) {
-      copyPixels = new int[w * h];
-    }
-    buffer.rewind();
-    try {
-      buffer.get(copyPixels);
-    } catch (BufferUnderflowException e) {
-      e.printStackTrace();
-      copyPixels = null;
-      return;
-    }
-
-    if (playing) {
-      fireMovieEvent();
-    }
-  }
-
-  protected synchronized void invokeEvent(int w, int h, Buffer buffer) {
-    available = true;
-    bufWidth = w;
-    bufHeight = h;
-    if (natBuffer != null) {
-      // To handle the situation where read() is not called in the sketch, so 
-      // that the native buffers are not being sent to the sink, and therefore, not disposed
-      // by it.
-      natBuffer.dispose(); 
-    }
-    natBuffer = buffer;
-
-    if (playing) {
-      fireMovieEvent();
-    }
-  }
-*/
-  
   private void fireMovieEvent() {
     // Creates a movieEvent.
     if (movieEventMethod != null) {
@@ -916,6 +803,7 @@ public class Movie extends PImage implements PConstants {
       }
     }
   }
+  
 
   ////////////////////////////////////////////////////////////
 
@@ -986,21 +874,6 @@ public class Movie extends PImage implements PConstants {
    */
   public void setBufferSink(Object sink) {
     bufferSink = sink;
-    initCopyMask();
-  }
-
-
-  /**
-   * Sets the object to use as destination for the frames read from the stream.
-   *
-   * NOTE: This is not official API and may/will be removed at any time.
-   *
-   * @param Object dest
-   * @param String mask
-   */
-  public void setBufferSink(Object sink, String mask) {
-    bufferSink = sink;
-    copyMask = mask;
   }
 
 
@@ -1056,15 +929,6 @@ public class Movie extends PImage implements PConstants {
   }
 
 
-  protected void initCopyMask() {
-    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-      copyMask = "red_mask=(int)0xFF000000, green_mask=(int)0xFF0000, blue_mask=(int)0xFF00";
-    } else {
-      copyMask = "red_mask=(int)0xFF, green_mask=(int)0xFF00, blue_mask=(int)0xFF0000";
-    }    
-  }    
-  
-  
   public synchronized void post() {
     if (useBufferSink && sinkDisposeMethod != null) {
       try {
@@ -1074,6 +938,7 @@ public class Movie extends PImage implements PConstants {
       }
     }
   }
+  
   
   private class NewSampleListener implements AppSink.NEW_SAMPLE {
 

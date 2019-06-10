@@ -3,6 +3,7 @@
 /*
   Part of the Processing project - http://processing.org
 
+  Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2004-12 Ben Fry and Casey Reas
   The previous version of this code was developed by Hernando Barragan
 
@@ -96,6 +97,7 @@ public class Capture extends PImage implements PConstants {
   protected String copyMask;
   protected Buffer natBuffer = null;
 //  protected BufferDataAppSink natSink = null;
+  
   protected String device;
   protected static List<Device> devices;    // we're caching this list for speed reasons
 
