@@ -27,9 +27,6 @@ package processing.video;
 
 import processing.core.*;
 
-//import java.awt.Dimension;
-//import java.io.*;
-//import java.net.URI;
 import java.nio.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -94,15 +91,12 @@ public class Capture extends PImage implements PConstants {
   protected Method sinkSetMethod;
   protected Method sinkDisposeMethod;
   protected Method sinkGetMethod;
-  protected String copyMask;
-  protected Buffer natBuffer = null;
-//  protected BufferDataAppSink natSink = null;
   
   protected String device;
   protected static List<Device> devices;    // we're caching this list for speed reasons
 
   NewSampleListener newSampleListener;
-//  NewPrerollListener newPrerollListener;
+  NewPrerollListener newPrerollListener;
   private final Lock bufferLock = new ReentrantLock();
 
   /**
@@ -193,30 +187,12 @@ public class Capture extends PImage implements PConstants {
       pixels = null;
 
       rgbSink.disconnect(newSampleListener);
-//      sink.disconnect(newPrerollListener);
+      rgbSink.disconnect(newPrerollListener);
       rgbSink.dispose();
       pipe.setState(org.freedesktop.gstreamer.State.NULL);
       pipe.getState();
       pipe.getBus().dispose();
       pipe.dispose();
-
-
-//      copyPixels = null;
-//      if (rgbSink != null) {
-//        rgbSink.removeListener();
-//        rgbSink.dispose();
-//        rgbSink = null;
-//      }
-
-//      natBuffer = null;
-//      if (natSink != null) {
-//        natSink.removeListener();
-//        natSink.dispose();
-//        natSink = null;
-//      }
-
-//      playbin.dispose();
-//      playbin = null;
 
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
@@ -608,57 +584,22 @@ public class Capture extends PImage implements PConstants {
       firstFrame = false;
     }
 
-    int[] temp = pixels;
-    pixels = copyPixels;
-    updatePixels();
-    copyPixels = temp;
-
-/*
-    if (useBufferSink) { // The native buffer from gstreamer is copied to the buffer sink.
-      outdatedPixels = true;
-      if (natBuffer == null) {
-        return;
-      }
-
-      if (firstFrame) {
-        super.init(bufWidth, bufHeight, ARGB, 1);
-        firstFrame = false;
-      }
-
+    if (useBufferSink) {
+      
       if (bufferSink == null) {
-        Object cache = parent.g.getCache(this);
-        if (cache == null) {
-          return;
-        }
-        setBufferSink(cache);
-        getSinkMethods();
+        Object cache = parent.g.getCache(Capture.this);
+        if (cache != null) {
+          setBufferSink(cache);
+          getSinkMethods();
+        }        
       }
 
-      ByteBuffer byteBuffer = natBuffer.getByteBuffer();
-
-      try {
-        sinkCopyMethod.invoke(bufferSink, new Object[] { natBuffer, byteBuffer, bufWidth, bufHeight });
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-
-      natBuffer = null;
-    } else { // The pixels just read from gstreamer are copied to the pixels array.
-      if (copyPixels == null) {
-        return;
-      }
-
-      if (firstFrame) {
-        super.init(bufWidth, bufHeight, RGB, 1);
-        firstFrame = false;
-      }
-
+    } else {
       int[] temp = pixels;
       pixels = copyPixels;
       updatePixels();
-      copyPixels = temp;
+      copyPixels = temp;      
     }
-    */
 
     available = false;
     newFrame = true;
@@ -681,7 +622,7 @@ public class Capture extends PImage implements PConstants {
   public synchronized void loadPixels() {
     super.loadPixels();
 
-    if (useBufferSink) {
+    if (useBufferSink && bufferSink != null) {
       /*
       if (natBuffer != null) {
         // This means that the OpenGL texture hasn't been created so far (the
@@ -788,6 +729,7 @@ public class Capture extends PImage implements PConstants {
 
 
     pipe = new Pipeline();
+    useBufferSink = Video.useGLBufferSink && parent.g.isGL();
 
     Element videoscale = ElementFactory.make("videoscale", null);
     Element videoconvert = ElementFactory.make("videoconvert", null);
@@ -804,9 +746,16 @@ public class Capture extends PImage implements PConstants {
     rgbSink = new AppSink("sink");
     rgbSink.set("emit-signals", true);
     newSampleListener = new NewSampleListener();
+    newPrerollListener = new NewPrerollListener();        
     rgbSink.connect(newSampleListener);
-    // XXX: unsure about BGRx
-    rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+    rgbSink.connect(newPrerollListener);
+
+    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+      if (useBufferSink) rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBx"));
+      else rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+    } else {
+      rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
+    }
 
     pipe.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
     Pipeline.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
@@ -908,46 +857,7 @@ public class Capture extends PImage implements PConstants {
 
   // Stream event handling.
 
-
-  protected synchronized void invokeEvent(int w, int h, IntBuffer buffer) {
-    available = true;
-    bufWidth = w;
-    bufHeight = h;
-
-    if (copyPixels == null) {
-      copyPixels = new int[w * h];
-    }
-    buffer.rewind();
-    try {
-      buffer.get(copyPixels);
-    } catch (BufferUnderflowException e) {
-      e.printStackTrace();
-      copyPixels = null;
-      return;
-    }
-
-    if (playing) {
-      fireMovieEvent();
-    }
-  }
-
-  protected synchronized void invokeEvent(int w, int h, Buffer buffer) {
-    available = true;
-    bufWidth = w;
-    bufHeight = h;
-    if (natBuffer != null) {
-      // To handle the situation where read() is not called in the sketch, so
-      // that the native buffers are not being sent to the sinke, and therefore, not disposed
-      // by it.
-      natBuffer.dispose();
-    }
-    natBuffer = buffer;
-
-    if (playing) {
-      fireMovieEvent();
-    }
-  }
-
+  
   private void fireMovieEvent() {
     // Creates a movieEvent.
     if (movieEventMethod != null) {
@@ -958,25 +868,6 @@ public class Capture extends PImage implements PConstants {
         e.printStackTrace();
         movieEventMethod = null;
       }
-    }
-  }
-
-  protected void eosEvent() {
-    if (repeat) {
-      if (0 < rate) {
-        // Playing forward, so we return to the beginning
-        jump(0);
-      } else {
-        // Playing backwards, so we go to the end.
-        jump(duration());
-      }
-
-      // The rate is set automatically to 1 when restarting the
-      // stream, so we need to call frameRate in order to reset
-      // to the latest fps rate.
-      frameRate(frameRate);
-    } else {
-      playing = false;
     }
   }
 
@@ -1045,21 +936,6 @@ public class Capture extends PImage implements PConstants {
    */
   public void setBufferSink(Object sink) {
     bufferSink = sink;
-    initCopyMask();
-  }
-
-
-  /**
-   * Sets the object to use as destination for the frames read from the stream.
-   *
-   * NOTE: This is not official API and may/will be removed at any time.
-   *
-   * @param Object dest
-   * @param String mask
-   */
-  public void setBufferSink(Object sink, String mask) {
-    bufferSink = sink;
-    copyMask = mask;
   }
 
 
@@ -1115,15 +991,6 @@ public class Capture extends PImage implements PConstants {
   }
 
 
-  protected void initCopyMask() {
-    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-      copyMask = "red_mask=(int)0xFF000000, green_mask=(int)0xFF0000, blue_mask=(int)0xFF00";
-    } else {
-      copyMask = "red_mask=(int)0xFF, green_mask=(int)0xFF00, blue_mask=(int)0xFF0000";
-    }
-  }
-
-
   public synchronized void post() {
     if (useBufferSink && sinkDisposeMethod != null) {
       try {
@@ -1175,31 +1042,50 @@ public class Capture extends PImage implements PConstants {
       Structure capsStruct = sample.getCaps().getStructure(0);
       int w = capsStruct.getInteger("width");
       int h = capsStruct.getInteger("height");
+      
+      
       Buffer buffer = sample.getBuffer();
       ByteBuffer bb = buffer.map(false);
       if (bb != null) {
+        
         // If the EDT is still copying data from the buffer, just drop this frame
         if (!bufferLock.tryLock()) {
           return FlowReturn.OK;
         }
-        IntBuffer rgb = bb.asIntBuffer();
 
         available = true;
         bufWidth = w;
         bufHeight = h;
-//        System.out.println("got a frame " + w + " " + h + " " + playing);
-        if (copyPixels == null) {
-          copyPixels = new int[w * h];
-        }
+                
+        if (useBufferSink && bufferSink != null) { // The native buffer from gstreamer is copied to the buffer sink.
+          
+          try {
+            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
+            if (playing) {
+              fireMovieEvent();
+            }             
+          } catch (Exception e) {
+            e.printStackTrace();
+          } finally {
+            bufferLock.unlock();
+          }        
+          
+        } else {
+          IntBuffer rgb = bb.asIntBuffer();
 
-        try {
-          rgb.get(copyPixels, 0, width * height);
-          if (playing) {
-            fireMovieEvent();
+          if (copyPixels == null) {
+            copyPixels = new int[w * h];
           }
 
-        } finally {
-          bufferLock.unlock();
+          try {
+            rgb.get(copyPixels, 0, width * height);
+            if (playing) {
+              fireMovieEvent();
+            }
+          } finally {
+            bufferLock.unlock();
+          }
+          
         }
 
         buffer.unmap();
@@ -1207,35 +1093,19 @@ public class Capture extends PImage implements PConstants {
       sample.dispose();
       return FlowReturn.OK;
     }
-
   }
+  
 
-  /*
   private class NewPrerollListener implements AppSink.NEW_PREROLL {
     @Override
-    public void newPreroll(AppSink sink) {
-        surfaceLock.lock();
-        Sample sample = sink.pullPreroll();
-        Structure capsStruct = sample.getCaps().getStructure(0);
-        int width = capsStruct.getInteger("width");
-        int height = capsStruct.getInteger("height");
-        try {
-            if (surface == null || surface.getWidth() != width || surface.getHeight() != height) {
-                if (surface != null && surface.sample != null) {
-                    surface.sample.dispose();
-                }
-                surface = new GStreamerSurface(width, height);
-            } else {
-                if (surface.sample != null) {
-                    surface.sample.dispose();
-                }
-            }
-            surface.sample = sample;
-            surface.modCount++;
-        } finally {
-            surfaceLock.unlock();
-        }
+    public FlowReturn newPreroll(AppSink sink) {
+      Sample sample = sink.pullPreroll();
+      Structure capsStruct = sample.getCaps().getStructure(0);
+      int w = capsStruct.getInteger("width");
+      int h = capsStruct.getInteger("height");
+
+      sample.dispose();
+      return FlowReturn.OK;
     }
   }
-  */
 }

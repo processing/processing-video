@@ -1015,7 +1015,6 @@ public class Movie extends PImage implements PConstants {
   private class NewPrerollListener implements AppSink.NEW_PREROLL {
     @Override
     public FlowReturn newPreroll(AppSink sink) {
-//      Sample sample = sink.pullSample();
       Sample sample = sink.pullPreroll();
 
       // pull out metadata from caps
