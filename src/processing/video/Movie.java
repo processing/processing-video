@@ -805,23 +805,25 @@ public class Movie extends PImage implements PConstants {
 
 
   protected void initSink() {
-    rgbSink = new AppSink("sink");
+    rgbSink = new AppSink("sink");    
+    useBufferSink = Video.useGLBufferSink && parent.g.isGL();
+    
     rgbSink.set("emit-signals", true);
     newSampleListener = new NewSampleListener();
     newPrerollListener = new NewPrerollListener();
     rgbSink.connect(newSampleListener);
     rgbSink.connect(newPrerollListener);
     if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-      rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+      if (useBufferSink) rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBx"));
+      else rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
     } else {
       rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
     }
+    // if (useBufferSink) playbin.setVideoSink(bin); else
     playbin.setVideoSink(rgbSink);
-    
+
     makeBusConnections(playbin.getBus());
     playbin.setState(org.freedesktop.gstreamer.State.READY);
-
-    useBufferSink = Video.useGLBufferSink && parent.g.isGL();
     
     sinkReady = true;
     newFrame = false;
