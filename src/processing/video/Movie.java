@@ -272,9 +272,8 @@ public class Movie extends PImage implements PConstants {
    * @brief Returns location of playback head in units of seconds
    */
   public float time() {
-    float sec = playbin.queryDuration(TimeUnit.SECONDS);
-    float nanosec = playbin.queryDuration(TimeUnit.NANOSECONDS);
-    return sec + Video.nanoSecToSecFrac(nanosec);
+    float nanosec = playbin.queryPosition(TimeUnit.NANOSECONDS);
+    return Video.nanoSecToSecFrac(nanosec);
   }
 
 
