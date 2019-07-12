@@ -691,8 +691,8 @@ public class Capture extends PImage implements PConstants {
       // use the default device from GStreamer
       srcElement = ElementFactory.make("autovideosrc", null);
 
-    } else if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
-
+    } else {
+    	
       // look for device
       if (devices == null) {
         DeviceMonitor monitor = new DeviceMonitor();
@@ -714,19 +714,7 @@ public class Capture extends PImage implements PConstants {
         throw new RuntimeException("Could not find device " + device);
       }
 
-    } else if (PApplet.platform == MACOSX) {
-
-      // use numeric index
-      srcElement = ElementFactory.make("avfvideosrc", null);
-      srcElement.set("device-index", Integer.parseInt(device));
-
-    } else {
-
-       // unused fallback
-       srcElement = ElementFactory.make("autovideosrc", null);
-
     }
-
 
     pipe = new Pipeline();
     useBufferSink = Video.useGLBufferSink && parent.g.isGL();
@@ -1009,26 +997,16 @@ public class Capture extends PImage implements PConstants {
     Video.init();
 
     String[] out;
-    if (PApplet.platform == WINDOWS || PApplet.platform == LINUX) {
+    
+    DeviceMonitor monitor = new DeviceMonitor();
+    monitor.addFilter("Video/Source", null);
+    devices = monitor.getDevices();
+    monitor.close();
 
-      DeviceMonitor monitor = new DeviceMonitor();
-      monitor.addFilter("Video/Source", null);
-      devices = monitor.getDevices();
-      monitor.close();
-
-      out = new String[devices.size()];
-      for (int i=0; i < devices.size(); i++) {
-        Device dev = devices.get(i);
-        out[i] = dev.getDisplayName();
-      }
-
-    } else {
-
-      // device enumeration is currently not supported on macOS
-      out = new String[1];
-      out[0] = "0";
-      System.err.println("Device enumeration is currently not supported on your platform.");
-
+    out = new String[devices.size()];
+    for (int i=0; i < devices.size(); i++) {
+      Device dev = devices.get(i);
+      out[i] = dev.getDisplayName();
     }
 
     return out;
@@ -1100,9 +1078,9 @@ public class Capture extends PImage implements PConstants {
     @Override
     public FlowReturn newPreroll(AppSink sink) {
       Sample sample = sink.pullPreroll();
-      Structure capsStruct = sample.getCaps().getStructure(0);
-      int w = capsStruct.getInteger("width");
-      int h = capsStruct.getInteger("height");
+//      Structure capsStruct = sample.getCaps().getStructure(0);
+//      int w = capsStruct.getInteger("width");
+//      int h = capsStruct.getInteger("height");
 
       sample.dispose();
       return FlowReturn.OK;
