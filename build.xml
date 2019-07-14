@@ -20,7 +20,7 @@
 	   srcdir="src" destdir="bin" 
 	   encoding="UTF-8"
 	   includeAntRuntime="false"
-	   classpath="${core.classpath.location}/core.jar; library/gst1-java-core-1.0.0-beta-2.jar; library/jna.jar"
+	   classpath="${core.classpath.location}/core.jar; library/gst1-java-core-1.0.0.jar; library/jna.jar"
 	   nowarn="true">
       <compilerclasspath path="${compiler.classpath.location}/org.eclipse.jdt.core.jar; 
                                ${compiler.classpath.location}/jdtCompilerAdapter.jar" />
@@ -55,8 +55,8 @@
     
     <!-- create the java reference of the library -->
     <mkdir dir="dist/tmp/video/reference" />	
-	  <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-14" 
-			classpath="${core.classpath.location}/core.jar;library/gst1-java-core-0.9.1.jar;library/jna.jar;bin"
+	  <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-19" 
+			classpath="${core.classpath.location}/core.jar;library/gst1-java-core-1.0.0.jar;library/jna.jar;bin"
 			destdir="dist/tmp/video/reference"
 			verbose="false" 
 			stylesheetfile="resources/stylesheet.css" 
