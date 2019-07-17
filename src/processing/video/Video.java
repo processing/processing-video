@@ -128,7 +128,7 @@ public class Video implements PConstants {
     // disable the use of gst-plugin-scanner on environments where we're
     // not using the host system's installation of GStreamer
     // the problem with gst-plugin-scanner is that the library expects it
-    // to exist at a specific location determinated at build time
+    // to exist at a specific location determined at build time
     if (PApplet.platform != LINUX) {
       Environment.libc.setenv("GST_REGISTRY_FORK", "no", 1);
     }
@@ -190,7 +190,7 @@ public class Video implements PConstants {
   static protected void buildMacOSXPaths() {
     LibraryPath libPath = new LibraryPath();
     String path = libPath.get();
-    gstreamerLibPath = buildGStreamerLibPath(path, "macosx" + bitsJVM);
+    gstreamerLibPath = buildGStreamerLibPath(path, "macosx");
     gstreamerPluginPath = gstreamerLibPath + "/gstreamer-1.0";
   }
 

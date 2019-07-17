@@ -4,7 +4,7 @@
 # https://github.com/gohai/processing-glvideo/blob/master/src/native/Makefile
 
 gst_folder=/Library/Frameworks/GStreamer.framework/Libraries
-lib_folder=../library/macosx64
+lib_folder=../library/macosx
 
 echo "Copying base gstreamer libs..."
 mkdir -p ${lib_folder}
@@ -23,4 +23,4 @@ echo "Relocating dependencies in gstreamer plugins..."
 # ./macosx_remove_extra_libs.py
 
 # silence runtime error
-rm -f ${lib_folder}/gstreamer-1.0/libgstopenjpeg.*
+#rm -f ${lib_folder}/gstreamer-1.0/libgstopenjpeg.*
