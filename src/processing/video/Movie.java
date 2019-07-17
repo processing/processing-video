@@ -253,9 +253,8 @@ public class Movie extends PImage implements PConstants {
    * @brief Returns length of movie in seconds
    */
   public float duration() {
-    float sec = playbin.queryDuration(TimeUnit.SECONDS);
     float nanosec = playbin.queryDuration(TimeUnit.NANOSECONDS);
-    return sec + Video.nanoSecToSecFrac(nanosec);
+    return Video.nanoSecToSecFrac(nanosec);
   }
 
 
