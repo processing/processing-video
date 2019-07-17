@@ -173,7 +173,12 @@ public class LibraryLoader {
       { "libwinpthread-1", new String[] {}, false },
       { "libx264-148", new String[] {}, false },
       { "libxml2-2", new String[] {}, false },
-      { "libz-1", new String[] {}, false }
+      { "libz-1", new String[] {}, false },
+      { "avcodec-58", new String[] {}, false },
+      { "avfilter-7", new String[] {}, false },
+      { "avformat-58", new String[] {}, false },
+      { "avutil-56", new String[] {}, false },
+      { "swresample-3", new String[] {}, false }
     };
   
   static final Object[][] MACOSX_DEPENDENCIES = {
