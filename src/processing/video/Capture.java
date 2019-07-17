@@ -58,9 +58,7 @@ import org.freedesktop.gstreamer.event.SeekType;
 public class Capture extends PImage implements PConstants {
   public static String[] supportedProtocols = { "http" };
   public float frameRate;
-//  public String filename;
-  public Pipeline pipe;
-  Bin bin;
+  public Pipeline pipeline;
 
   protected boolean playing = false;
   protected boolean paused = false;
@@ -174,7 +172,7 @@ public class Capture extends PImage implements PConstants {
    * NOTE: This is not official API and may/will be removed at any time.
    */
   public void dispose() {
-    if (pipe != null) {
+    if (pipeline != null) {
 //      try {
 //        if (playbin.isPlaying()) {
 //          playbin.stop();
@@ -189,10 +187,10 @@ public class Capture extends PImage implements PConstants {
       rgbSink.disconnect(newSampleListener);
       rgbSink.disconnect(newPrerollListener);
       rgbSink.dispose();
-      pipe.setState(org.freedesktop.gstreamer.State.NULL);
-      pipe.getState();
-      pipe.getBus().dispose();
-      pipe.dispose();
+      pipeline.setState(org.freedesktop.gstreamer.State.NULL);
+      pipeline.getState();
+      pipeline.getBus().dispose();
+      pipeline.dispose();
 
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
@@ -235,11 +233,11 @@ public class Capture extends PImage implements PConstants {
     float f = (0 < ifps && 0 < frameRate) ? ifps / frameRate : 1;
 
     if (playing) {
-      pipe.pause();
-      pipe.getState();
+      pipeline.pause();
+      pipeline.getState();
     }
 
-    long t = pipe.queryPosition(TimeUnit.NANOSECONDS);
+    long t = pipeline.queryPosition(TimeUnit.NANOSECONDS);
 
     boolean res;
     long start, stop;
@@ -251,22 +249,22 @@ public class Capture extends PImage implements PConstants {
       stop = t;
     }
 
-    res = pipe.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
-    pipe.getState();
+    res = pipeline.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
+    pipeline.getState();
 
     if (!res) {
       PGraphics.showWarning("Seek operation failed.");
     }
 
     if (playing) {
-      pipe.play();
+      pipeline.play();
     }
 
 
     // getState() will wait until any async state change
     // (like seek in this case) has completed
     seeking = true;
-    pipe.getState();
+    pipeline.getState();
     seeking = false;
   }
 
@@ -310,9 +308,8 @@ public class Capture extends PImage implements PConstants {
    * @brief Returns length of movie in seconds
    */
   public float duration() {
-    float sec = pipe.queryDuration(TimeUnit.SECONDS);
-    float nanosec = pipe.queryDuration(TimeUnit.NANOSECONDS);
-    return sec + Video.nanoSecToSecFrac(nanosec);
+    long nanosec = pipeline.queryDuration(TimeUnit.NANOSECONDS);
+    return Video.nanoSecToSecFrac(nanosec);   
   }
 
 
@@ -329,9 +326,8 @@ public class Capture extends PImage implements PConstants {
    * @brief Returns location of playback head in units of seconds
    */
   public float time() {
-    float sec = pipe.queryDuration(TimeUnit.SECONDS);
-    float nanosec = pipe.queryDuration(TimeUnit.NANOSECONDS);
-    return sec + Video.nanoSecToSecFrac(nanosec);
+    long nanosec = pipeline.queryPosition(TimeUnit.NANOSECONDS);
+    return Video.nanoSecToSecFrac(nanosec);
   }
 
 
@@ -451,8 +447,8 @@ public class Capture extends PImage implements PConstants {
 
     playing = true;
     paused = false;
-    pipe.play();
-    pipe.getState();
+    pipeline.play();
+    pipeline.getState();
   }
 
 
@@ -519,8 +515,8 @@ public class Capture extends PImage implements PConstants {
 
     playing = false;
     paused = true;
-    pipe.pause();
-    pipe.getState();
+    pipeline.pause();
+    pipeline.getState();
   }
 
 
@@ -548,8 +544,8 @@ public class Capture extends PImage implements PConstants {
       playing = false;
     }
     paused = false;
-    pipe.stop();
-    pipe.getState();
+    pipeline.stop();
+    pipeline.getState();
   }
 
 
@@ -680,7 +676,7 @@ public class Capture extends PImage implements PConstants {
 
   protected void initGStreamer(PApplet parent) {
     this.parent = parent;
-    pipe = null;
+    pipeline = null;
 
     Video.init();
 
@@ -716,7 +712,7 @@ public class Capture extends PImage implements PConstants {
 
     }
 
-    pipe = new Pipeline();
+    pipeline = new Pipeline();
     useBufferSink = Video.useGLBufferSink && parent.g.isGL();
 
     Element videoscale = ElementFactory.make("videoscale", null);
@@ -745,10 +741,10 @@ public class Capture extends PImage implements PConstants {
       rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
     }
 
-    pipe.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+    pipeline.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
     Pipeline.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
 
-    makeBusConnections(pipe.getBus());
+    makeBusConnections(pipeline.getBus());
 
 
     try {
@@ -810,7 +806,7 @@ public class Capture extends PImage implements PConstants {
 
 
   protected void initSink() {
-    pipe.setState(org.freedesktop.gstreamer.State.READY);
+    pipeline.setState(org.freedesktop.gstreamer.State.READY);
     sinkReady = true;
     newFrame = false;
   }
@@ -828,7 +824,7 @@ public class Capture extends PImage implements PConstants {
         public void endOfStream(GstObject arg0) {
             try {
                 if (repeat) {
-                  pipe.seek(0, TimeUnit.NANOSECONDS);
+                  pipeline.seek(0, TimeUnit.NANOSECONDS);
                 } else {
                     stop();
                 }

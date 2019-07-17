@@ -205,10 +205,11 @@ public class Video implements PConstants {
   }
 
   
-  static protected float nanoSecToSecFrac(float nanosec) {
-    for (int i = 0; i < 3; i++)
-      nanosec /= 1E3;
-    return nanosec;
+  static protected float nanoSecToSecFrac(long nanosec) {
+//    for (int i = 0; i < 3; i++)
+//      nanosec /= 1E3;
+//    return nanosec;
+    return (float)(nanosec / 1E9);
   }
 
   
