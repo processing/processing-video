@@ -59,7 +59,7 @@ public class Capture extends PImage implements PConstants {
   public static String[] supportedProtocols = { "http" };
   public float frameRate;
   public Pipeline pipeline;
-
+  
   protected boolean playing = false;
   protected boolean paused = false;
   protected boolean repeat = false;
@@ -250,7 +250,7 @@ public class Capture extends PImage implements PConstants {
     } else {
       start = 0;
       stop = t;
-    }
+    } 
 
     res = pipeline.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
     pipeline.getState();
@@ -312,7 +312,8 @@ public class Capture extends PImage implements PConstants {
    */
   public float duration() {
     long nanosec = pipeline.queryDuration(TimeUnit.NANOSECONDS);
-    return Video.nanoSecToSecFrac(nanosec);   
+    return Video.nanoSecToSecFrac(nanosec); 
+    
   }
 
 
@@ -350,17 +351,27 @@ public class Capture extends PImage implements PConstants {
    */
   public void jump(float where) {
 
-//    if (seeking) return;
-//
-//    if (!sinkReady) {
-//      initSink();
-//    }
-//
-//    // Round the time to a multiple of the source framerate, in
-//    // order to eliminate stutter. Suggested by Daniel Shiffman
-//    float fps = getSourceFrameRate();
-//    int frame = (int)(where * fps);
-//    where = frame / fps;
+    if (seeking) return;
+
+    if (!sinkReady) {
+      initSink();
+    }
+
+    // Round the time to a multiple of the source framerate, in
+    // order to eliminate stutter. Suggested by Daniel Shiffman
+    //float fps =  getSourceFrameRate();
+    //int frame = (int)(where * fps);
+    //where = frame / fps;
+    
+    final float position = where;
+    
+    Gst.invokeLater(() -> {
+        long dur = pipeline.queryDuration(TimeUnit.NANOSECONDS);
+        if (dur > 0) {
+            long pos = (long) (position * dur);
+            seek(false, pos);
+        }
+    });
 //
 //    boolean res;
 //    long pos = Video.secToNanoLong(where);
@@ -838,6 +849,31 @@ public class Capture extends PImage implements PConstants {
     });
   }
 
+  private void seek(boolean eos, long position) {
+      
+      double rate = this.rate;
+      if (rate == 0.0) {
+          rate = 0.0000001;
+      }
+      long duration = pipeline.queryDuration(TimeUnit.NANOSECONDS);
+      if (eos) {
+          if (rate > 0) {
+              position = 0;
+          } else {
+              position = duration;
+          }
+      } else if (position < 0) {
+          position = pipeline.queryPosition(TimeUnit.NANOSECONDS);
+      }
+
+      if (rate > 0) {
+          pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, position, SeekType.SET, duration);
+      } else {
+          pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, 0, SeekType.SET, position);
+      }
+      
+      pipeline.getState(10, TimeUnit.MILLISECONDS);
+  }
 
 
   ////////////////////////////////////////////////////////////
@@ -887,7 +923,7 @@ public class Capture extends PImage implements PConstants {
    * @return float
    */
 //  protected float getSourceFrameRate() {
-//    return (float)pipe.getVideoSinkFrameRate();
+//    return (float)pipeline.getVideoSinkFrameRate();
 //  }
 
 
@@ -998,20 +1034,19 @@ public class Capture extends PImage implements PConstants {
 	  return doList(true);
   }
 
-	  /**
-	   *  Returns a list of all capture devices, using the device's raw name
-	   *  @return array of raw device names
-	   */
+	/**
+	*  Returns a list of all capture devices, using the device's raw name
+	*  @return array of raw device names
+	*/
   static public String[] listRawNames() {
 	  return doList(false);
   }
 
-
-	  /**
-	   *  Returns a list of all capture devices
-	   *  @boolean listDisplayNames whether to list display names or raw names
-	   *  @return array of device names
-	   */
+	/**
+	*  Returns a list of all capture devices
+	*  @boolean listDisplayNames whether to list display names or raw names
+	*  @return array of device names
+	*/
   static private String[] doList(boolean listDisplayNames) {
 	  
     Video.init();
@@ -1098,10 +1133,57 @@ public class Capture extends PImage implements PConstants {
     @Override
     public FlowReturn newPreroll(AppSink sink) {
       Sample sample = sink.pullPreroll();
-//      Structure capsStruct = sample.getCaps().getStructure(0);
-//      int w = capsStruct.getInteger("width");
-//      int h = capsStruct.getInteger("height");
+      Structure capsStruct = sample.getCaps().getStructure(0);
+      int w = capsStruct.getInteger("width");
+      int h = capsStruct.getInteger("height");
+      
+      
+      Buffer buffer = sample.getBuffer();
+      ByteBuffer bb = buffer.map(false);
+      if (bb != null) {
+        
+        // If the EDT is still copying data from the buffer, just drop this frame
+        if (!bufferLock.tryLock()) {
+          return FlowReturn.OK;
+        }
 
+        available = true;
+        bufWidth = w;
+        bufHeight = h;
+                
+        if (useBufferSink && bufferSink != null) { // The native buffer from gstreamer is copied to the buffer sink.
+          
+          try {
+            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
+            if (playing) {
+              fireMovieEvent();
+            }             
+          } catch (Exception e) {
+            e.printStackTrace();
+          } finally {
+            bufferLock.unlock();
+          }        
+          
+        } else {
+          IntBuffer rgb = bb.asIntBuffer();
+
+          if (copyPixels == null) {
+            copyPixels = new int[w * h];
+          }
+
+          try {
+            rgb.get(copyPixels, 0, width * height);
+            if (playing) {
+              fireMovieEvent();
+            }
+          } finally {
+            bufferLock.unlock();
+          }
+          
+        }
+
+        buffer.unmap();
+      }
       sample.dispose();
       return FlowReturn.OK;
     }
