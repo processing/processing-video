@@ -110,7 +110,8 @@ public class Capture extends PImage implements PConstants {
    *  Open a specific capture device
    *  @param parent PApplet, typically "this"
    *  @param device device name
-   *  @see list()
+   *  @see Capture#list()
+   *  @see Capture#listRawNames()
    */
   public Capture(PApplet parent, String device) {
     // attemt to use a default resolution
@@ -144,7 +145,8 @@ public class Capture extends PImage implements PConstants {
    *  @param width width in pixels
    *  @param height height in pixels
    *  @param device device name
-   *  @see list()
+   *  @see Capture#list()
+   *  @see Capture#listRawNames()
    */
   public Capture(PApplet parent, int width, int height, String device) {
     this(parent, width, height, device, 0);
@@ -157,7 +159,8 @@ public class Capture extends PImage implements PConstants {
    *  @param height height in pixels
    *  @param device device name (null opens the default device)
    *  @param fps frames per second (0 uses the default framerate)
-   *  @see list()
+   *  @see Capture#list()
+   *  @see Capture#listRawNames()
    */
   public Capture(PApplet parent, int width, int height, String device, float fps) {
     super(width, height, RGB);
@@ -698,7 +701,7 @@ public class Capture extends PImage implements PConstants {
       }
 
       for (int i=0; i < devices.size(); i++) {
-        if (devices.get(i).getDisplayName().equals(device)) {
+        if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device)) {
           // found device
           srcElement = devices.get(i).createElement(null);
           break;
@@ -986,10 +989,31 @@ public class Capture extends PImage implements PConstants {
   }
 
   /**
-   *  Returns a list of all capture devices
+   *  Returns a list of all capture devices, using the device's pretty display name.
+   *  Multiple devices can have identical display names. To disambiguate between devices
+   *  with the same display name, use {Capture#listRawNames}.
    *  @return array of device names
    */
   static public String[] list() {
+	  return doList(true);
+  }
+
+	  /**
+	   *  Returns a list of all capture devices, using the device's raw name
+	   *  @return array of raw device names
+	   */
+  static public String[] listRawNames() {
+	  return doList(false);
+  }
+
+
+	  /**
+	   *  Returns a list of all capture devices
+	   *  @boolean listDisplayNames whether to list display names or raw names
+	   *  @return array of device names
+	   */
+  static private String[] doList(boolean listDisplayNames) {
+	  
     Video.init();
 
     String[] out;
@@ -1002,7 +1026,7 @@ public class Capture extends PImage implements PConstants {
     out = new String[devices.size()];
     for (int i=0; i < devices.size(); i++) {
       Device dev = devices.get(i);
-      out[i] = dev.getDisplayName();
+      out[i] = listDisplayNames ? dev.getDisplayName() : dev.getName();
     }
 
     return out;
