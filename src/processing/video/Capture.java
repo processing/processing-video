@@ -31,6 +31,8 @@ import java.nio.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.lang.reflect.*;
@@ -146,7 +148,6 @@ public class Capture extends PImage implements PConstants {
    *  @param height height in pixels
    *  @param device device name
    *  @see Capture#list()
-   *  @see Capture#listRawNames()
    */
   public Capture(PApplet parent, int width, int height, String device) {
     this(parent, width, height, device, 0);
@@ -160,7 +161,6 @@ public class Capture extends PImage implements PConstants {
    *  @param device device name (null opens the default device)
    *  @param fps frames per second (0 uses the default framerate)
    *  @see Capture#list()
-   *  @see Capture#listRawNames()
    */
   public Capture(PApplet parent, int width, int height, String device, float fps) {
     super(width, height, RGB);
@@ -710,9 +710,12 @@ public class Capture extends PImage implements PConstants {
         devices = monitor.getDevices();
         monitor.close();
       }
-
+      
+      
       for (int i=0; i < devices.size(); i++) {
-        if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device)) {
+    	String deviceName = devices.get(i).getDisplayName() + " #" + Integer.toString(i + 1);
+    	  
+        if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
           // found device
           srcElement = devices.get(i).createElement(null);
           break;
@@ -1026,46 +1029,55 @@ public class Capture extends PImage implements PConstants {
 
   /**
    *  Returns a list of all capture devices, using the device's pretty display name.
-   *  Multiple devices can have identical display names. To disambiguate between devices
-   *  with the same display name, use {Capture#listRawNames}.
+   *  Multiple devices can have identical display names, appending ' #n' to devices
+   *  with duplicate display names.
    *  @return array of device names
    */
   static public String[] list() {
-	  return doList(true);
-  }
+	    Video.init();
 
-	/**
-	*  Returns a list of all capture devices, using the device's raw name
-	*  @return array of raw device names
-	*/
-  static public String[] listRawNames() {
-	  return doList(false);
-  }
+	    String[] out;
+	    
+	    DeviceMonitor monitor = new DeviceMonitor();
+	    monitor.addFilter("Video/Source", null);
+	    devices = monitor.getDevices();
+	    monitor.close();
+   
+	    out = new String[devices.size()];
+	    for (int i = 0; i < devices.size(); i++) {
+	    	Device dev = devices.get(i);	    		     	
+	    	out[i] = checkCameraDuplicates(dev) > 1 ? assignDisplayName(dev, i) : dev.getDisplayName();
+	    }
 
-	/**
-	*  Returns a list of all capture devices
-	*  @boolean listDisplayNames whether to list display names or raw names
-	*  @return array of device names
-	*/
-  static private String[] doList(boolean listDisplayNames) {
+	    return out;	  	  	  
+  }
+  
+  static private String assignDisplayName(Device d, int pos) {
+	  String s = "";
+	  int count = 1;
 	  
-    Video.init();
-
-    String[] out;
-    
-    DeviceMonitor monitor = new DeviceMonitor();
-    monitor.addFilter("Video/Source", null);
-    devices = monitor.getDevices();
-    monitor.close();
-
-    out = new String[devices.size()];
-    for (int i=0; i < devices.size(); i++) {
-      Device dev = devices.get(i);
-      out[i] = listDisplayNames ? dev.getDisplayName() : dev.getName();
-    }
-
-    return out;
+	  for(int i = 0; i < devices.size(); i++) {
+		  if(devices.get(i).getDisplayName().equals(d.getDisplayName())){
+			  if(i == pos) {
+				  s = d.getDisplayName() + " #" + Integer.toString(count);
+			  }		
+			  count++;
+		  }		  
+	  }
+ 
+	  return s;
   }
+  
+  static private int checkCameraDuplicates(Device d) {
+	  int count = 0;
+	  for (int i = 0; i < devices.size(); i++) {
+		  if(devices.get(i).getDisplayName().equals(d.getDisplayName())) {
+			  count++;
+		  }
+	  }    
+	  return count;
+  }
+ 
 
   private class NewSampleListener implements AppSink.NEW_SAMPLE {
 
