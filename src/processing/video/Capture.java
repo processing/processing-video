@@ -712,9 +712,8 @@ public class Capture extends PImage implements PConstants {
       }
       
       
-      for (int i=0; i < devices.size(); i++) {
-    	String deviceName = devices.get(i).getDisplayName() + " #" + Integer.toString(i + 1);
-    	  
+      for (int i=0; i < devices.size(); i++) {  
+    	String deviceName = assignDisplayName(devices.get(i), i);
         if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
           // found device
           srcElement = devices.get(i).createElement(null);
