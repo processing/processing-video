@@ -351,27 +351,33 @@ public class Capture extends PImage implements PConstants {
    */
   public void jump(float where) {
 
-    if (seeking) return;
+	  if (seeking) return;
 
-    if (!sinkReady) {
-      initSink();
-    }
+	    if (!sinkReady) {
+	      initSink();
+	    }
 
-    // Round the time to a multiple of the source framerate, in
-    // order to eliminate stutter. Suggested by Daniel Shiffman
-    //float fps =  getSourceFrameRate();
-    //int frame = (int)(where * fps);
-    //where = frame / fps;
-    
-    final float position = where;
-    
-    Gst.invokeLater(() -> {
-        long dur = pipeline.queryDuration(TimeUnit.NANOSECONDS);
-        if (dur > 0) {
-            long pos = (long) (position * dur);
-            seek(false, pos);
-        }
-    });
+	    // Round the time to a multiple of the source framerate, in
+	    // order to eliminate stutter. Suggested by Daniel Shiffman
+	    if (frameRate != -1) {
+	      int frame = (int)(where * frameRate);
+	      where = frame / frameRate;
+	    }
+
+	    boolean res;
+	    long pos = Video.secToNanoLong(where);
+
+	    res = pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, pos, SeekType.NONE, -1);
+
+	    if (!res) {
+	      PGraphics.showWarning("Seek operation failed.");
+	    }
+
+	    // getState() will wait until any async state change
+	    // (like seek in this case) has completed
+	    seeking = true;
+	    pipeline.getState();
+	    seeking = false;    
 //
 //    boolean res;
 //    long pos = Video.secToNanoLong(where);
