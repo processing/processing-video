@@ -16,7 +16,7 @@ void setup() {
   if (cameras == null) {
     println("Failed to retrieve the list of available cameras, will try the default...");
     cam = new Capture(this, 640, 480);
-  } if (cameras.length == 0) {
+  } else if (cameras.length == 0) {
     println("There are no cameras available for capture.");
     exit();
   } else {
