@@ -762,7 +762,7 @@ public class Capture extends PImage implements PConstants {
     } else {
       rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
     }
-
+    
     pipeline.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
     Pipeline.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
 
@@ -855,32 +855,6 @@ public class Capture extends PImage implements PConstants {
             }
         }
     });
-  }
-
-  private void seek(boolean eos, long position) {
-      
-      double rate = this.rate;
-      if (rate == 0.0) {
-          rate = 0.0000001;
-      }
-      long duration = pipeline.queryDuration(TimeUnit.NANOSECONDS);
-      if (eos) {
-          if (rate > 0) {
-              position = 0;
-          } else {
-              position = duration;
-          }
-      } else if (position < 0) {
-          position = pipeline.queryPosition(TimeUnit.NANOSECONDS);
-      }
-
-      if (rate > 0) {
-          pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, position, SeekType.SET, duration);
-      } else {
-          pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, 0, SeekType.SET, position);
-      }
-      
-      pipeline.getState(10, TimeUnit.MILLISECONDS);
   }
 
 
