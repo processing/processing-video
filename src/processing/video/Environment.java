@@ -44,9 +44,9 @@ public class Environment {
     static Object libc;
     static {
       if (System.getProperty("os.name").contains("Windows")) {
-        libc = Native.loadLibrary("msvcrt", WinLibC.class);
+        libc = Native.load("msvcrt", WinLibC.class);
       } else {
-        libc = Native.loadLibrary("c", UnixLibC.class);
+        libc = Native.load("c", UnixLibC.class);
       }
     }
 
