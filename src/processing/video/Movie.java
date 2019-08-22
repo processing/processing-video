@@ -123,7 +123,6 @@ public class Movie extends PImage implements PConstants {
           playbin.getState();
         }
       } catch (Exception e) {
-        e.printStackTrace();
       }
 
       pixels = null;
@@ -138,7 +137,7 @@ public class Movie extends PImage implements PConstants {
       
       parent.g.removeCache(this);
       parent.unregisterMethod("dispose", this);
-      parent.unregisterMethod("post", this);      
+      parent.unregisterMethod("post", this);
     }
   }
 
@@ -180,18 +179,11 @@ public class Movie extends PImage implements PConstants {
       stop = t;
     }
     
-    Gst.invokeLater(new Runnable() {
-      public void run() {
-        boolean res = playbin.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
-        if (!res) {
-          PGraphics.showWarning("Seek operation failed.");
-        }        
-      }
-    });
+    seek(rate * f, start, stop);
     
     frameRate = ifps;
   }
-
+  
 
   /**
    * Sets the relative playback speed of the movie. The <b>rate</b>
@@ -266,15 +258,7 @@ public class Movie extends PImage implements PConstants {
     }
 
     long pos = Video.secToNanoLong(where);
-
-    Gst.invokeLater(new Runnable() {
-      public void run() {
-        boolean res = playbin.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, pos, SeekType.NONE, -1);
-        if (!res) {
-          PGraphics.showWarning("Seek operation failed.");
-        }        
-      }
-    });
+    seek(rate, pos, -1);
   }
 
 
@@ -301,11 +285,15 @@ public class Movie extends PImage implements PConstants {
     if (!sinkReady) {
       initSink();
     }
-
+    
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        playbin.play();
+      }
+    });
+    
     playing = true;
     paused = false;
-    playbin.play();
-    playbin.getState();
   }
 
 
@@ -352,10 +340,14 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
 
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        playbin.pause();
+      }
+    });
+
     playing = false;
-    paused = true;
-    playbin.pause();
-    playbin.getState();
+    paused = true;    
   }
 
 
@@ -372,13 +364,14 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
 
-    if (playing) {
-      jump(0);
-      playing = false;
-    }
-    paused = false;
-    playbin.stop();
-    playbin.getState();
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        playbin.stop();
+      }
+    });
+    
+    playing = false;
+    paused = false;    
   }
 
 
@@ -424,7 +417,11 @@ public class Movie extends PImage implements PConstants {
    */
   public void volume(float v) {
     if (playing && PApplet.abs(volume - v) > 0.001f) {
-      playbin.setVolume(v);
+      Gst.invokeLater(new Runnable() {
+        public void run() {
+          playbin.setVolume(v);
+        }
+      });      
       volume = v;
     }
   }
@@ -670,6 +667,24 @@ public class Movie extends PImage implements PConstants {
   // Stream event handling.
 
 
+  private void seek(double rate, long start, long stop) {
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        boolean res;
+        if (stop == -1) {
+          res = playbin.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.NONE, stop);
+        } else {
+          res = playbin.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);  
+        }
+        if (!res) {
+          PGraphics.showWarning("Seek operation failed.");
+        }
+        playbin.getState(10, TimeUnit.MILLISECONDS);
+      }
+    });    
+  }
+  
+  
   private void fireMovieEvent() {
     if (movieEventMethod != null) {
       try {
