@@ -5,7 +5,9 @@
 
   Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2004-12 Ben Fry and Casey Reas
+  GStreamer implementation ported from GSVideo library by Andres Colubri
   The previous version of this code was developed by Hernando Barragan
+  
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -31,8 +33,6 @@ import java.nio.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-//import java.util.Arrays;
-//import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.lang.reflect.*;
@@ -46,32 +46,28 @@ import org.freedesktop.gstreamer.event.SeekType;
 
 
 /**
-   * ( begin auto-generated from Movie.xml )
-   *
-   * Datatype for storing and playing movies in Apple's QuickTime format.
-   * Movies must be located in the sketch's data directory or an accessible
-   * place on the network to load without an error.
-   *
-   * ( end auto-generated )
+ * Datatype for storing and manipulating video frames from an attached capture device such as a camera. 
  *
  * @webref video
  * @usage application
  */
-public class Capture extends PImage implements PConstants {
-//  public static String[] supportedProtocols = { "http" };
-  public float frameRate;
+public class Capture extends PImage implements PConstants {  
   public Pipeline pipeline;
   
-  protected boolean playing = false;
-//  protected boolean paused = false;
-//  protected boolean repeat = false;
+  public int nativeWidth;
+  public int nativeHeight;
+  public float nativeFrameRate;
+  
+  public float frameRate;
+  
+  protected boolean capturing = false;
 
   protected float rate;
   protected int bufWidth;
   protected int bufHeight;
   protected float volume;
 
-  protected Method movieEventMethod;
+  protected Method captureEventMethod;
   protected Object eventHandler;
 
   protected boolean available;
@@ -82,7 +78,6 @@ public class Capture extends PImage implements PConstants {
   protected int[] copyPixels = null;
 
   protected boolean firstFrame = true;
-//  protected boolean seeking = false;
 
   protected boolean useBufferSink = false;
   protected boolean outdatedPixels = true;
@@ -99,15 +94,17 @@ public class Capture extends PImage implements PConstants {
   NewPrerollListener newPrerollListener;
   private final Lock bufferLock = new ReentrantLock();
 
+  
   /**
    *  Open the default capture device
    *  @param parent PApplet, typically "this"
    */
   public Capture(PApplet parent) {
-    // attemt to use a default resolution
+    // Attempt to use a default resolution
     this(parent, 640, 480, null, 0);
   }
 
+  
   /**
    *  Open a specific capture device
    *  @param parent PApplet, typically "this"
@@ -116,10 +113,11 @@ public class Capture extends PImage implements PConstants {
    *  @see Capture#listRawNames()
    */
   public Capture(PApplet parent, String device) {
-    // attemt to use a default resolution
+    // Attempt to use a default resolution
     this(parent, 640, 480, device, 0);
   }
 
+  
   /**
    *  Open the default capture device with a given resolution
    *  @param parent PApplet, typically "this"
@@ -130,6 +128,7 @@ public class Capture extends PImage implements PConstants {
     this(parent, width, height, null, 0);
   }
 
+  
   /**
    *  Open the default capture device with a given resolution and framerate
    *  @param parent PApplet, typically "this"
@@ -141,6 +140,7 @@ public class Capture extends PImage implements PConstants {
     this(parent, width, height, null, fps);
   }
 
+  
   /**
    *  Open a specific capture device with a given resolution
    *  @param parent PApplet, typically "this"
@@ -153,6 +153,7 @@ public class Capture extends PImage implements PConstants {
     this(parent, width, height, device, 0);
   }
 
+  
   /**
    *  Open a specific capture device with a given resolution and framerate
    *  @param parent PApplet, typically "this"
@@ -169,21 +170,21 @@ public class Capture extends PImage implements PConstants {
     initGStreamer(parent);
   }
 
+  
   /**
-   * Disposes all the native resources associated to this movie.
+   * Disposes all the native resources associated to this capture device.
    *
    * NOTE: This is not official API and may/will be removed at any time.
    */
   public void dispose() {
     if (pipeline != null) {
-//      try {
-//        if (playbin.isPlaying()) {
-//          playbin.stop();
-//          playbin.getState();
-//        }
-//      } catch (Exception e) {
-//        e.printStackTrace();
-//      }
+      try {
+        if (pipeline.isPlaying()) {
+          pipeline.stop();
+          pipeline.getState();
+        }
+      } catch (Exception e) {
+      }
 
       pixels = null;
 
@@ -215,16 +216,12 @@ public class Capture extends PImage implements PConstants {
 
 
   /**
-   * ( begin auto-generated from Movie_frameRate.xml )
-   *
    * Sets how often frames are read from the capture device. Setting the <b>fps</b>
    * parameter to 4, for example, will cause 4 frames to be read per second.
    *
-   * ( end auto-generated )
-   *
-   * @webref movie
+   * @webref capture
    * @usage web_application
-   * @param ifps speed of the movie in frames per second
+   * @param ifps speed of the capture device in frames per second
    * @brief Sets the target frame rate
    */
   public void frameRate(float ifps) {
@@ -240,92 +237,18 @@ public class Capture extends PImage implements PConstants {
       stop = t;
     }
     
-    Gst.invokeLater(new Runnable() {
-      public void run() {
-        boolean res = pipeline.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
-        if (!res) {
-          PGraphics.showWarning("Seek operation failed.");
-        }        
-      }
-    });
+    seek(rate * f, start, stop);
     
     frameRate = ifps;
   }
 
 
   /**
-   * ( begin auto-generated from Movie_speed.xml )
+   * Returns "true" when a new frame from the device is available to read.
    *
-   * Sets the relative playback speed of the movie. The <b>rate</b>
-   * parameters sets the speed where 2.0 will play the movie twice as fast,
-   * 0.5 will play at half the speed, and -1 will play the movie in normal
-   * speed in reverse.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
+   * @webref capture
    * @usage web_application
-   * @param irate speed multiplier for movie playback
-   * @brief Sets the relative playback speed
-   */
-//  public void speed(float irate) {
-//    // If the frameRate() method is called continuously with very similar
-//    // rate values, playback might become sluggish. This condition attempts
-//    // to take care of that.
-//    if (PApplet.abs(rate - irate) > 0.1) {
-//      rate = irate;
-//      frameRate(frameRate); // The framerate is the same, but the rate (speed) could be different.
-//    }
-//  }
-//
-//
-//  /**
-//   * ( begin auto-generated from Movie_duration.xml )
-//   *
-//   * Returns the length of the movie in seconds. If the movie is 1 minute and
-//   * 20 seconds long the value returned will be 80.0.
-//   *
-//   * ( end auto-generated )
-//   *
-//   * @webref movie
-//   * @usage web_application
-//   * @brief Returns length of movie in seconds
-//   */
-//  public float duration() {
-//    long nanosec = pipeline.queryDuration(TimeUnit.NANOSECONDS);
-//    return Video.nanoSecToSecFrac(nanosec); 
-//    
-//  }
-
-
-  /**
-   * ( begin auto-generated from Movie_time.xml )
-   *
-   * Returns the location of the playback head in seconds. For example, if
-   * the movie has been playing for 4 seconds, the number 4.0 will be returned.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @brief Returns location of playback head in units of seconds
-   */
-//  public float time() {
-//    long nanosec = pipeline.queryPosition(TimeUnit.NANOSECONDS);
-//    return Video.nanoSecToSecFrac(nanosec);
-//  }
-
-
-  /**
-   * ( begin auto-generated from Movie_available.xml )
-   *
-   * Returns "true" when a new movie frame is available to read.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @brief Returns "true" when a new movie frame is available to read.
+   * @brief Returns "true" when a new frame is available to read.
    */
   public boolean available() {
     return available;
@@ -333,153 +256,57 @@ public class Capture extends PImage implements PConstants {
 
 
   /**
-   * ( begin auto-generated from Movie_play.xml )
+   * Starts capturing frames from the selected device.
    *
-   * Plays a movie one time and stops at the last frame.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
+   * @webref capture.
    * @usage web_application
-   * @brief Plays movie one time and stops at the last frame
+   * @brief Starts video capture
    */
   public void start() {
-//    if (seeking) return;
-
     if (!sinkReady) {
       initSink();
     }
 
-    playing = true;
-//    paused = false;
-    pipeline.play();
-    pipeline.getState();
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        pipeline.play();
+      }
+    });
+    
+    capturing = true;    
   }
 
-
+  
   /**
-   * ( begin auto-generated from Movie_loop.xml )
+   * Stops capturing frames from an attached device.
    *
-   * Plays a movie continuously, restarting it when it's over.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
+   * @webref capture
    * @usage web_application
-   * @brief Plays a movie continuously, restarting it when it's over.
-   */
-//  public void loop() {
-//    if (seeking) return;
-//
-//    repeat = true;
-//    play();
-//  }
-
-
-  /**
-   * ( begin auto-generated from Movie_noLoop.xml )
-   *
-   * If a movie is looping, calling noLoop() will cause it to play until the
-   * end and then stop on the last frame.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @brief Stops the movie from looping
-   */
-//  public void noLoop() {
-//    if (seeking) return;
-//
-//    if (!sinkReady) {
-//      initSink();
-//    }
-//
-//    repeat = false;
-//  }
-
-
-  /**
-   * ( begin auto-generated from Movie_pause.xml )
-   *
-   * Pauses a movie during playback. If a movie is started again with play(),
-   * it will continue from where it was paused.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @brief Pauses the movie
-   */
-//  public void pause() {
-//    if (seeking) return;
-//
-//    if (!sinkReady) {
-//      initSink();
-//    }
-//
-//    playing = false;
-//    paused = true;
-//    pipeline.pause();
-//    pipeline.getState();
-//  }
-
-
-  /**
-   * ( begin auto-generated from Movie_stop.xml )
-   *
-   * Stops a movie from continuing. The playback returns to the beginning so
-   * when a movie is played, it will begin from the beginning.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @brief Stops the movie
+   * @brief Stops video capture
    */
   public void stop() {
-//    if (seeking) return;
-
     if (!sinkReady) {
       initSink();
     }
 
-//    if (playing) {
-//      jump(0);
-      playing = false;
-//    }
-//    paused = false;
-    pipeline.stop();
-    pipeline.getState();
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        pipeline.stop();
+      }
+    });    
+    
+    capturing = false;
   }
 
 
   /**
-   * ( begin auto-generated from Movie_read.xml )
+   * Reads the current frame of the device.
    *
-   * Reads the current frame of the movie.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
+   * @webref capture
    * @usage web_application
    * @brief Reads the current frame
    */
   public synchronized void read() {
-//    if (frameRate < 0) {
-//      // Framerate not set yet, so we obtain from stream,
-//      // which is already playing since we are in read().
-//      frameRate = getSourceFrameRate();
-//    }
-//    if (volume < 0) {
-//      // Idem for volume
-//      volume = (float)playbin.getVolume();
-//    }
-//
-//    if (copyPixels == null) {
-//      return;
-//    }
-
     if (firstFrame) {
       super.init(bufWidth, bufHeight, RGB, 1);
       firstFrame = false;
@@ -506,50 +333,15 @@ public class Capture extends PImage implements PConstants {
     newFrame = true;
   }
 
-  
-  public boolean isPlaying() {
-    return playing;
-  }
-  
-  
+
   /**
-   * Change the volume. Values are from 0 to 1.
-   *
-   * @param float v
+   * Loads the pixel data for the image into its <b>pixels[]</b> array.
    */
-//  public void volume(float v) {
-//    if (playing && PApplet.abs(volume - v) > 0.001f) {
-//      pipe.setVolume(v);
-//      volume = v;
-//    }
-//  }
-
-
+  @Override  
   public synchronized void loadPixels() {
     super.loadPixels();
 
     if (useBufferSink && bufferSink != null) {
-      /*
-      if (natBuffer != null) {
-        // This means that the OpenGL texture hasn't been created so far (the
-        // video frame not drawn using image()), but the user wants to use the
-        // pixel array, which we can just get from natBuffer.
-        IntBuffer buf = natBuffer.getByteBuffer().asIntBuffer();
-        buf.rewind();
-        buf.get(pixels);
-        Video.convertToARGB(pixels, width, height);
-      } else if (sinkGetMethod != null) {
-        try {
-          // sinkGetMethod will copy the latest buffer to the pixels array,
-          // and the pixels will be copied to the texture when the OpenGL
-          // renderer needs to draw it.
-          sinkGetMethod.invoke(bufferSink, new Object[] { pixels });
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-      */
-
       try {
         // sinkGetMethod will copy the latest buffer to the pixels array,
         // and the pixels will be copied to the texture when the OpenGL
@@ -564,6 +356,10 @@ public class Capture extends PImage implements PConstants {
   }
 
 
+  /**
+   * Reads the color of any pixel or grabs a section of an image.
+   */
+  @Override  
   public int get(int x, int y) {
     if (outdatedPixels) loadPixels();
     return super.get(x, y);
@@ -579,6 +375,14 @@ public class Capture extends PImage implements PConstants {
   }
 
 
+  /**
+   * Check if this device object is currently capturing.
+   */  
+  public boolean isCapturing() {
+    return capturing;
+  }
+  
+  
   ////////////////////////////////////////////////////////////
 
   // Initialization methods.
@@ -594,12 +398,12 @@ public class Capture extends PImage implements PConstants {
     Element srcElement = null;
     if (device == null) {
 
-      // use the default device from GStreamer
+      // Use the default device from GStreamer
       srcElement = ElementFactory.make("autovideosrc", null);
 
     } else {
-    	
-      // look for device
+      
+      // Look for device
       if (devices == null) {
         DeviceMonitor monitor = new DeviceMonitor();
         monitor.addFilter("Video/Source", null);
@@ -611,13 +415,13 @@ public class Capture extends PImage implements PConstants {
       for (int i=0; i < devices.size(); i++) {  
     	String deviceName = assignDisplayName(devices.get(i), i);
         if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
-          // found device
+          // Found device
           srcElement = devices.get(i).createElement(null);
           break;
         }
       }
 
-      // error out if we got passed an invalid device name
+      // Error out if we got passed an invalid device name
       if (srcElement == null) {
         throw new RuntimeException("Could not find device " + device);
       }
@@ -660,7 +464,7 @@ public class Capture extends PImage implements PConstants {
 
 
     try {
-      // register methods
+      // Register methods
       parent.registerMethod("dispose", this);
       parent.registerMethod("post", this);
 
@@ -678,7 +482,7 @@ public class Capture extends PImage implements PConstants {
 
   public static String fpsToFramerate(float fps) {
     String formatted = Float.toString(fps);
-    // this presumes the delimitter is always a dot
+    // This presumes the delimitter is always a dot
     int i = formatted.indexOf('.');
     if (Math.floor(fps) != fps) {
       int denom = (int)Math.pow(10, formatted.length()-i-1);
@@ -691,8 +495,8 @@ public class Capture extends PImage implements PConstants {
 
 
   /**
-   * Uses a generic object as handler of the movie. This object should have a
-   * movieEvent method that receives a GSMovie argument. This method will
+   * Uses a generic object as handler of the capture. This object should have a
+   * captureEvent method that receives a Capture argument. This method will
    * be called upon a new frame read event.
    *
    */
@@ -700,17 +504,17 @@ public class Capture extends PImage implements PConstants {
     eventHandler = obj;
 
     try {
-      movieEventMethod = eventHandler.getClass().getMethod("captureEvent", Capture.class);
+      captureEventMethod = eventHandler.getClass().getMethod("captureEvent", Capture.class);
       return;
     } catch (Exception e) {
       // no such method, or an error... which is fine, just ignore
     }
 
-    // movieEvent can alternatively be defined as receiving an Object, to allow
+    // captureEvent can alternatively be defined as receiving an Object, to allow
     // Processing mode implementors to support the video library without linking
     // to it at build-time.
     try {
-      movieEventMethod = eventHandler.getClass().getMethod("captureEvent", Object.class);
+      captureEventMethod = eventHandler.getClass().getMethod("captureEvent", Object.class);
     } catch (Exception e) {
       // no such method, or an error... which is fine, just ignore
     }
@@ -726,24 +530,18 @@ public class Capture extends PImage implements PConstants {
 
   private void makeBusConnections(Bus bus) {
     bus.connect(new Bus.ERROR() {
-
-        public void errorMessage(GstObject arg0, int arg1, String arg2) {
-            System.err.println(arg0 + " : " + arg2);
-        }
+      public void errorMessage(GstObject arg0, int arg1, String arg2) {
+        System.err.println(arg0 + " : " + arg2);
+      }
     });
     bus.connect(new Bus.EOS() {
-
-        public void endOfStream(GstObject arg0) {
-            try {
-//                if (repeat) {
-//                  pipeline.seek(0, TimeUnit.NANOSECONDS);
-//                } else {
-              stop();
-//                }
-            } catch (Exception ex) {
-              ex.printStackTrace();
-            }
+      public void endOfStream(GstObject arg0) {
+        try {
+          stop();
+        } catch (Exception ex) {
+          ex.printStackTrace();
         }
+      }
     });
   }
 
@@ -753,66 +551,30 @@ public class Capture extends PImage implements PConstants {
   // Stream event handling.
 
   
-  private void fireMovieEvent() {
-    // Creates a movieEvent.
-    if (movieEventMethod != null) {
+  private void seek(double rate, long start, long stop) {
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        boolean res = pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);  
+        if (!res) {
+          PGraphics.showWarning("Seek operation failed.");
+        }
+        pipeline.getState(10, TimeUnit.MILLISECONDS);
+      }
+    });    
+  }
+  
+  
+  private void fireCaptureEvent() {
+    if (captureEventMethod != null) {
       try {
-        movieEventMethod.invoke(eventHandler, this);
+        captureEventMethod.invoke(eventHandler, this);
       } catch (Exception e) {
         System.err.println("error, disabling captureEvent()");
         e.printStackTrace();
-        movieEventMethod = null;
+        captureEventMethod = null;
       }
     }
   }
-
-
-  ////////////////////////////////////////////////////////////
-
-  // Stream query methods.
-
-
-  /**
-   * Get the height of the source video. Note: calling this method repeatedly
-   * can slow down playback performance.
-   *
-   * @return int
-   */
-//  protected int getSourceHeight() {
-//    Dimension dim = pipe.getVideoSize();
-//    if (dim != null) {
-//      return dim.height;
-//    } else {
-//      return 0;
-//    }
-//  }
-
-
-  /**
-   * Get the original framerate of the source video. Note: calling this method
-   * repeatedly can slow down playback performance.
-   *
-   * @return float
-   */
-//  protected float getSourceFrameRate() {
-//    return (float)pipeline.getVideoSinkFrameRate();
-//  }
-
-
-  /**
-   * Get the width of the source video. Note: calling this method repeatedly
-   * can slow down playback performance.
-   *
-   * @return int
-   */
-//  protected int getSourceWidth() {
-//    Dimension dim = pipe.getVideoSize();
-//    if (dim != null) {
-//      return dim.width;
-//    } else {
-//      return 0;
-//    }
-//  }
 
 
   ////////////////////////////////////////////////////////////
@@ -855,7 +617,7 @@ public class Capture extends PImage implements PConstants {
       sinkCopyMethod = bufferSink.getClass().getMethod("copyBufferFromSource",
         new Class[] { Object.class, ByteBuffer.class, int.class, int.class });
     } catch (Exception e) {
-      throw new RuntimeException("Movie: provided sink object doesn't have a " +
+      throw new RuntimeException("Capture: provided sink object doesn't have a " +
                                  "copyBufferFromSource method.");
     }
 
@@ -864,7 +626,7 @@ public class Capture extends PImage implements PConstants {
         new Class[] { Object.class });
       sinkSetMethod.invoke(bufferSink, new Object[] { this });
     } catch (Exception e) {
-      throw new RuntimeException("Movie: provided sink object doesn't have a " +
+      throw new RuntimeException("Capture: provided sink object doesn't have a " +
                                  "setBufferSource method.");
     }
 
@@ -872,7 +634,7 @@ public class Capture extends PImage implements PConstants {
       sinkDisposeMethod = bufferSink.getClass().getMethod("disposeSourceBuffer",
         new Class[] { });
     } catch (Exception e) {
-      throw new RuntimeException("Movie: provided sink object doesn't have " +
+      throw new RuntimeException("Capture: provided sink object doesn't have " +
                                  "a disposeSourceBuffer method.");
     }
 
@@ -880,7 +642,7 @@ public class Capture extends PImage implements PConstants {
       sinkGetMethod = bufferSink.getClass().getMethod("getBufferPixels",
         new Class[] { int[].class });
     } catch (Exception e) {
-      throw new RuntimeException("Movie: provided sink object doesn't have " +
+      throw new RuntimeException("Capture: provided sink object doesn't have " +
                                  "a getBufferPixels method.");
     }
   }
@@ -953,10 +715,19 @@ public class Capture extends PImage implements PConstants {
     @Override
     public FlowReturn newSample(AppSink sink) {
       Sample sample = sink.pullSample();
-      Structure capsStruct = sample.getCaps().getStructure(0);
-      int w = capsStruct.getInteger("width");
-      int h = capsStruct.getInteger("height");
       
+      // Pull out metadata from caps
+      Structure capsStruct = sample.getCaps().getStructure(0);
+      nativeWidth = capsStruct.getInteger("width");
+      nativeHeight = capsStruct.getInteger("height");
+      Fraction fps = capsStruct.getFraction("framerate");
+      nativeFrameRate = (float)fps.numerator / fps.denominator;
+      
+      // Set the playback rate to the file's native framerate
+      // unless the user has already set a custom one
+      if (frameRate == -1.0) {
+        frameRate = nativeFrameRate;
+      }      
       
       Buffer buffer = sample.getBuffer();
       ByteBuffer bb = buffer.map(false);
@@ -968,15 +739,15 @@ public class Capture extends PImage implements PConstants {
         }
 
         available = true;
-        bufWidth = w;
-        bufHeight = h;
+        bufWidth = nativeWidth;
+        bufHeight = nativeHeight;
                 
-        if (useBufferSink && bufferSink != null) { // The native buffer from gstreamer is copied to the buffer sink.
+        if (useBufferSink && bufferSink != null) { // The native buffer from GStreamer is copied to the buffer sink.
           
           try {
             sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
-            if (playing) {
-              fireMovieEvent();
+            if (capturing) {
+              fireCaptureEvent();
             }             
           } catch (Exception e) {
             e.printStackTrace();
@@ -988,13 +759,13 @@ public class Capture extends PImage implements PConstants {
           IntBuffer rgb = bb.asIntBuffer();
 
           if (copyPixels == null) {
-            copyPixels = new int[w * h];
+            copyPixels = new int[nativeWidth * nativeHeight];
           }
 
           try {
             rgb.get(copyPixels, 0, width * height);
-            if (playing) {
-              fireMovieEvent();
+            if (capturing) {
+              fireCaptureEvent();
             }
           } finally {
             bufferLock.unlock();
@@ -1014,11 +785,21 @@ public class Capture extends PImage implements PConstants {
     @Override
     public FlowReturn newPreroll(AppSink sink) {
       Sample sample = sink.pullPreroll();
+      
+      // Pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
-      int w = capsStruct.getInteger("width");
-      int h = capsStruct.getInteger("height");
+      nativeWidth = capsStruct.getInteger("width");
+      nativeHeight = capsStruct.getInteger("height");
+      Fraction fps = capsStruct.getFraction("framerate");
+      nativeFrameRate = (float)fps.numerator / fps.denominator;
       
+      // Set the playback rate to the file's native framerate
+      // unless the user has already set a custom one
+      if (frameRate == -1.0) {
+        frameRate = nativeFrameRate;
+      } 
       
+      /*
       Buffer buffer = sample.getBuffer();
       ByteBuffer bb = buffer.map(false);
       if (bb != null) {
@@ -1032,12 +813,12 @@ public class Capture extends PImage implements PConstants {
         bufWidth = w;
         bufHeight = h;
                 
-        if (useBufferSink && bufferSink != null) { // The native buffer from gstreamer is copied to the buffer sink.
+        if (useBufferSink && bufferSink != null) { // The native buffer from GStreamer is copied to the buffer sink.
           
           try {
             sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
-            if (playing) {
-              fireMovieEvent();
+            if (capturing) {
+              fireCaptureEvent();
             }             
           } catch (Exception e) {
             e.printStackTrace();
@@ -1054,8 +835,8 @@ public class Capture extends PImage implements PConstants {
 
           try {
             rgb.get(copyPixels, 0, width * height);
-            if (playing) {
-              fireMovieEvent();
+            if (capturing) {
+              fireCaptureEvent();
             }
           } finally {
             bufferLock.unlock();
@@ -1065,6 +846,9 @@ public class Capture extends PImage implements PConstants {
 
         buffer.unmap();
       }
+      */
+      
+      
       sample.dispose();
       return FlowReturn.OK;
     }
