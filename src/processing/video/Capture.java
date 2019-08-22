@@ -31,8 +31,8 @@ import java.nio.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.Arrays;
-import java.util.Collections;
+//import java.util.Arrays;
+//import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.lang.reflect.*;
@@ -58,13 +58,13 @@ import org.freedesktop.gstreamer.event.SeekType;
  * @usage application
  */
 public class Capture extends PImage implements PConstants {
-  public static String[] supportedProtocols = { "http" };
+//  public static String[] supportedProtocols = { "http" };
   public float frameRate;
   public Pipeline pipeline;
   
   protected boolean playing = false;
-  protected boolean paused = false;
-  protected boolean repeat = false;
+//  protected boolean paused = false;
+//  protected boolean repeat = false;
 
   protected float rate;
   protected int bufWidth;
@@ -82,7 +82,7 @@ public class Capture extends PImage implements PConstants {
   protected int[] copyPixels = null;
 
   protected boolean firstFrame = true;
-  protected boolean seeking = false;
+//  protected boolean seeking = false;
 
   protected boolean useBufferSink = false;
   protected boolean outdatedPixels = true;
@@ -217,7 +217,7 @@ public class Capture extends PImage implements PConstants {
   /**
    * ( begin auto-generated from Movie_frameRate.xml )
    *
-   * Sets how often frames are read from the movie. Setting the <b>fps</b>
+   * Sets how often frames are read from the capture device. Setting the <b>fps</b>
    * parameter to 4, for example, will cause 4 frames to be read per second.
    *
    * ( end auto-generated )
@@ -228,21 +228,9 @@ public class Capture extends PImage implements PConstants {
    * @brief Sets the target frame rate
    */
   public void frameRate(float ifps) {
-    if (seeking) return;
-
-    // We calculate the target ratio in the case both the
-    // current and target framerates are valid (greater than
-    // zero), otherwise we leave it as 1.
     float f = (0 < ifps && 0 < frameRate) ? ifps / frameRate : 1;
-
-    if (playing) {
-      pipeline.pause();
-      pipeline.getState();
-    }
-
+    
     long t = pipeline.queryPosition(TimeUnit.NANOSECONDS);
-
-    boolean res;
     long start, stop;
     if (rate > 0) {
       start = t;
@@ -250,25 +238,18 @@ public class Capture extends PImage implements PConstants {
     } else {
       start = 0;
       stop = t;
-    } 
-
-    res = pipeline.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
-    pipeline.getState();
-
-    if (!res) {
-      PGraphics.showWarning("Seek operation failed.");
     }
-
-    if (playing) {
-      pipeline.play();
-    }
-
-
-    // getState() will wait until any async state change
-    // (like seek in this case) has completed
-    seeking = true;
-    pipeline.getState();
-    seeking = false;
+    
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        boolean res = pipeline.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
+        if (!res) {
+          PGraphics.showWarning("Seek operation failed.");
+        }        
+      }
+    });
+    
+    frameRate = ifps;
   }
 
 
@@ -287,34 +268,34 @@ public class Capture extends PImage implements PConstants {
    * @param irate speed multiplier for movie playback
    * @brief Sets the relative playback speed
    */
-  public void speed(float irate) {
-    // If the frameRate() method is called continuously with very similar
-    // rate values, playback might become sluggish. This condition attempts
-    // to take care of that.
-    if (PApplet.abs(rate - irate) > 0.1) {
-      rate = irate;
-      frameRate(frameRate); // The framerate is the same, but the rate (speed) could be different.
-    }
-  }
-
-
-  /**
-   * ( begin auto-generated from Movie_duration.xml )
-   *
-   * Returns the length of the movie in seconds. If the movie is 1 minute and
-   * 20 seconds long the value returned will be 80.0.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @brief Returns length of movie in seconds
-   */
-  public float duration() {
-    long nanosec = pipeline.queryDuration(TimeUnit.NANOSECONDS);
-    return Video.nanoSecToSecFrac(nanosec); 
-    
-  }
+//  public void speed(float irate) {
+//    // If the frameRate() method is called continuously with very similar
+//    // rate values, playback might become sluggish. This condition attempts
+//    // to take care of that.
+//    if (PApplet.abs(rate - irate) > 0.1) {
+//      rate = irate;
+//      frameRate(frameRate); // The framerate is the same, but the rate (speed) could be different.
+//    }
+//  }
+//
+//
+//  /**
+//   * ( begin auto-generated from Movie_duration.xml )
+//   *
+//   * Returns the length of the movie in seconds. If the movie is 1 minute and
+//   * 20 seconds long the value returned will be 80.0.
+//   *
+//   * ( end auto-generated )
+//   *
+//   * @webref movie
+//   * @usage web_application
+//   * @brief Returns length of movie in seconds
+//   */
+//  public float duration() {
+//    long nanosec = pipeline.queryDuration(TimeUnit.NANOSECONDS);
+//    return Video.nanoSecToSecFrac(nanosec); 
+//    
+//  }
 
 
   /**
@@ -329,106 +310,10 @@ public class Capture extends PImage implements PConstants {
    * @usage web_application
    * @brief Returns location of playback head in units of seconds
    */
-  public float time() {
-    long nanosec = pipeline.queryPosition(TimeUnit.NANOSECONDS);
-    return Video.nanoSecToSecFrac(nanosec);
-  }
-
-
-  /**
-   * ( begin auto-generated from Movie_jump.xml )
-   *
-   * Jumps to a specific location within a movie. The parameter <b>where</b>
-   * is in terms of seconds. For example, if the movie is 12.2 seconds long,
-   * calling <b>jump(6.1)</b> would go to the middle of the movie.
-   *
-   * ( end auto-generated )
-   *
-   * @webref movie
-   * @usage web_application
-   * @param where position to jump to specified in seconds
-   * @brief Jumps to a specific location
-   */
-  public void jump(float where) {
-
-	  if (seeking) return;
-
-	    if (!sinkReady) {
-	      initSink();
-	    }
-
-	    // Round the time to a multiple of the source framerate, in
-	    // order to eliminate stutter. Suggested by Daniel Shiffman
-	    if (frameRate != -1) {
-	      int frame = (int)(where * frameRate);
-	      where = frame / frameRate;
-	    }
-
-	    boolean res;
-	    long pos = Video.secToNanoLong(where);
-
-	    res = pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, pos, SeekType.NONE, -1);
-
-	    if (!res) {
-	      PGraphics.showWarning("Seek operation failed.");
-	    }
-
-	    // getState() will wait until any async state change
-	    // (like seek in this case) has completed
-	    seeking = true;
-	    pipeline.getState();
-	    seeking = false;    
-//
-//    boolean res;
-//    long pos = Video.secToNanoLong(where);
-//
-//    res = pipe.seek(rate, Format.TIME, SeekFlags.FLUSH,
-//                       SeekType.SET, pos, SeekType.NONE, -1);
-//
-//    if (!res) {
-//      PGraphics.showWarning("Seek operation failed.");
-//    }
-
-    // getState() will wait until any async state change
-    // (like seek in this case) has completed
-//    seeking = true;
-//    pipe.getState();
-//    seeking = false;
-    /*
-    if (seeking) return; // don't seek again until the current seek operation is done.
-
-    if (!sinkReady) {
-      initSink();
-    }
-
-    // Round the time to a multiple of the source framerate, in
-    // order to eliminate stutter. Suggested by Daniel Shiffman
-    float fps = getSourceFrameRate();
-    int frame = (int)(where * fps);
-    final float seconds = frame / fps;
-
-    // Put the seek operation inside a thread to avoid blocking the main
-    // animation thread
-    Thread seeker = new Thread() {
-      @Override
-      public void run() {
-        long pos = Video.secToNanoLong(seconds);
-        boolean res = playbin.seek(rate, Format.TIME, SeekFlags.FLUSH,
-                                   SeekType.SET, pos, SeekType.NONE, -1);
-        if (!res) {
-          PGraphics.showWarning("Seek operation failed.");
-        }
-
-        // getState() will wait until any async state change
-        // (like seek in this case) has completed
-        seeking = true;
-        playbin.getState();
-        seeking = false;
-      }
-    };
-    seeker.start();
-    */
-  }
+//  public float time() {
+//    long nanosec = pipeline.queryPosition(TimeUnit.NANOSECONDS);
+//    return Video.nanoSecToSecFrac(nanosec);
+//  }
 
 
   /**
@@ -459,14 +344,14 @@ public class Capture extends PImage implements PConstants {
    * @brief Plays movie one time and stops at the last frame
    */
   public void start() {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
     }
 
     playing = true;
-    paused = false;
+//    paused = false;
     pipeline.play();
     pipeline.getState();
   }
@@ -503,15 +388,15 @@ public class Capture extends PImage implements PConstants {
    * @usage web_application
    * @brief Stops the movie from looping
    */
-  public void noLoop() {
-    if (seeking) return;
-
-    if (!sinkReady) {
-      initSink();
-    }
-
-    repeat = false;
-  }
+//  public void noLoop() {
+//    if (seeking) return;
+//
+//    if (!sinkReady) {
+//      initSink();
+//    }
+//
+//    repeat = false;
+//  }
 
 
   /**
@@ -526,18 +411,18 @@ public class Capture extends PImage implements PConstants {
    * @usage web_application
    * @brief Pauses the movie
    */
-  public void pause() {
-    if (seeking) return;
-
-    if (!sinkReady) {
-      initSink();
-    }
-
-    playing = false;
-    paused = true;
-    pipeline.pause();
-    pipeline.getState();
-  }
+//  public void pause() {
+//    if (seeking) return;
+//
+//    if (!sinkReady) {
+//      initSink();
+//    }
+//
+//    playing = false;
+//    paused = true;
+//    pipeline.pause();
+//    pipeline.getState();
+//  }
 
 
   /**
@@ -553,17 +438,17 @@ public class Capture extends PImage implements PConstants {
    * @brief Stops the movie
    */
   public void stop() {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
     }
 
-    if (playing) {
-      jump(0);
+//    if (playing) {
+//      jump(0);
       playing = false;
-    }
-    paused = false;
+//    }
+//    paused = false;
     pipeline.stop();
     pipeline.getState();
   }
@@ -621,7 +506,12 @@ public class Capture extends PImage implements PConstants {
     newFrame = true;
   }
 
-
+  
+  public boolean isPlaying() {
+    return playing;
+  }
+  
+  
   /**
    * Change the volume. Values are from 0 to 1.
    *
@@ -845,11 +735,11 @@ public class Capture extends PImage implements PConstants {
 
         public void endOfStream(GstObject arg0) {
             try {
-                if (repeat) {
-                  pipeline.seek(0, TimeUnit.NANOSECONDS);
-                } else {
-                    stop();
-                }
+//                if (repeat) {
+//                  pipeline.seek(0, TimeUnit.NANOSECONDS);
+//                } else {
+              stop();
+//                }
             } catch (Exception ex) {
               ex.printStackTrace();
             }
