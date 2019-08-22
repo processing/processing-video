@@ -59,7 +59,7 @@ public class Video implements PConstants {
 
   protected static boolean defaultGLibContext = false;
   
-  protected static boolean useGstreamerSystemInstall = false;
+  protected static boolean usingGStreamerSystemInstall = false;
   
   protected static long INSTANCES_COUNT = 0;
   
@@ -147,49 +147,44 @@ public class Video implements PConstants {
    
     // instead of setting the plugin path via scanPath(), we could alternatively
     // also set the GST_PLUGIN_PATH_1_0 environment variable
-	addPlugins();
-	
-	
-	// output GStreamer version, lib path, plugin path
-	// and whether a system install is being used
-	printGStreamerInfo();
+    addPlugins();
+  
+  
+    // output GStreamer version, lib path, plugin path
+    // and whether a system install is being used
+    printGStreamerInfo();
   }
 
   static protected void printGStreamerInfo() {
-	  
-	  String output = "";
-	  System.out.println("Gstreamer Version: " + Gst.getVersionString());
-	  
-	  if(useGstreamerSystemInstall) {
-	    	output = "Using System Install Gstreamer: ";
-	        
-	    	// get x64-bit root of GStreamer install
-	    	if(System.getenv("GSTREAMER_1_0_ROOT_X86_64") != null && bitsJVM == 64) {
-	    		output += System.getenv("GSTREAMER_1_0_ROOT_X86_64");
-	    	}
-	  
-	    	// get x32-bit root of GStreamer install
-	    	else if(System.getenv("GSTREAMER_1_0_ROOT_X86") != null && bitsJVM == 32) {
-	    		output += System.getenv("GSTREAMER_1_0_ROOT_X86");
-	    	}
-	    	
-	    	else {
-	    		output += "Unknown location, please set GSTREAMER_1_0_ROOT_X86(_64) to where GStreamer is installed";
-	    	}
-	    	
-	    	System.out.println(output);
-	  }
-	  
-	  // simply output gstreamerLibPath and gstreamerPluginPath when using bundled GStreamer
-	  else {
-		    System.out.println("Gstreamer Library Path: " + gstreamerLibPath);
-		    System.out.println("Gstreamer Plugin Path: " + gstreamerPluginPath);
-	  }
-	    
-}
-  
+
+    String output = "";
+    System.out.println("GStreamer version: " + Gst.getVersion());
+
+    if (usingGStreamerSystemInstall) {
+      output = "Using system install GStreamer: ";
+      
+      if(System.getenv("GSTREAMER_1_0_ROOT_X86_64") != null && bitsJVM == 64) {
+        // get x64-bit root of GStreamer install
+        output += System.getenv("GSTREAMER_1_0_ROOT_X86_64");
+      } else if(System.getenv("GSTREAMER_1_0_ROOT_X86") != null && bitsJVM == 32) {
+        // get x32-bit root of GStreamer install
+        output += System.getenv("GSTREAMER_1_0_ROOT_X86");
+      } else {
+        output += "Unknown location, please set GSTREAMER_1_0_ROOT_X86(_64) to where GStreamer is installed";
+      }
+
+      System.out.println(output);
+    }
+
+    // simply output gstreamerLibPath and gstreamerPluginPath when using bundled GStreamer
+    else {
+      System.out.println("GStreamer library path: " + gstreamerLibPath);
+      System.out.println("GStreamer plugin path: " + gstreamerPluginPath);
+    }
+  }
+
   static protected void addPlugins() {
-    if (!gstreamerPluginPath.equals("") && !useGstreamerSystemInstall) {
+    if (!gstreamerPluginPath.equals("") && !usingGStreamerSystemInstall) {
       Registry reg = Registry.get();
       boolean res;
       res = reg.scanPath(gstreamerPluginPath);
@@ -239,16 +234,13 @@ public class Video implements PConstants {
     if (path.exists()) {
       return base + os; 
     } else {     	
-    	useGstreamerSystemInstall = true;  
+    	usingGStreamerSystemInstall = true;  
     	return base;  
     }
   }
 
   
   static protected float nanoSecToSecFrac(long nanosec) {
-//    for (int i = 0; i < 3; i++)
-//      nanosec /= 1E3;
-//    return nanosec;
     return (float)(nanosec / 1E9);
   }
 
