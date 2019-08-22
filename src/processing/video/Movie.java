@@ -588,6 +588,18 @@ public class Movie extends PImage implements PConstants {
     if (outdatedPixels) loadPixels();
     return super.get(x, y);
   }
+
+  public boolean isPlaying(){
+    return playing;
+  }
+
+  public boolean isPaused(){
+    return paused;
+  }
+
+  public boolean isRepeating(){
+    return repeat;
+  }
   
   
   protected void getImpl(int sourceX, int sourceY,
