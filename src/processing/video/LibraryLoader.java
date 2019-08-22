@@ -5,6 +5,7 @@
 
   Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2011-12 Ben Fry and Casey Reas
+  GStreamer implementation ported from GSVideo library by Andres Colubri
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -50,10 +51,7 @@ public class LibraryLoader {
       { "libgstallocators-1.0-0", new String[] {}, false },
       { "libgstapp-1.0-0", new String[] {}, false },
       { "libgstaudio-1.0-0", new String[] {}, false },
-      //{ "libgstbadallocators-1.0-0", new String[] {}, false },
       { "libgstbadaudio-1.0-0", new String[] {}, false },
-      //{ "libgstbadbase-1.0-0", new String[] {}, false },
-      //{ "libgstbadvideo-1.0-0", new String[] {}, false },
       { "libgstbase-1.0-0", new String[] {}, false },
       { "libgstbasecamerabinsrc-1.0-0", new String[] {}, false },
       { "libgstcheck-1.0-0", new String[] {}, false },
@@ -88,7 +86,6 @@ public class LibraryLoader {
       { "libcairo-2", new String[] {}, false },
       { "libcairo-gobject-2", new String[] {}, false },
       { "libcairo-script-interpreter-2", new String[] {}, false },
-      //{ "libcharset-1", new String[] {}, false },
       { "libcroco-0.6-3", new String[] {}, false },
       { "libcrypto-1_1-x64", new String[] {}, false },
       { "libdca-0", new String[] {}, false },
@@ -96,7 +93,6 @@ public class LibraryLoader {
       { "libdvdnav-4", new String[] {}, false },
       { "libdvdread-4", new String[] {}, false },
       { "libexpat-1", new String[] {}, false },
-      //{ "libfaad-2", new String[] {}, false },
       { "libffi-7", new String[] {}, false },
       { "libFLAC-8", new String[] {}, false },
       { "libfontconfig-1", new String[] {}, false },
@@ -117,15 +113,12 @@ public class LibraryLoader {
       { "libgthread-2.0-0", new String[] {}, false },
       { "libharfbuzz-0", new String[] {}, false },
       { "libhogweed-4", new String[] {}, false },
-      //{ "libiconv-2", new String[] {}, false },
       { "libintl-8", new String[] {}, false },
       { "libjpeg-8", new String[] {}, false },
       { "libjson-glib-1.0-0", new String[] {}, false },
       { "libkate-1", new String[] {}, false },
       { "libmms-0", new String[] {}, false },
       { "libmp3lame-0", new String[] {}, false },
-      //{ "libmpeg2-0", new String[] {}, false },
-      //{ "libmpeg2convert-0", new String[] {}, false },
       { "libmpg123-0", new String[] {}, false },
       { "libnettle-6", new String[] {}, false },
       { "libnice-10", new String[] {}, false },
@@ -229,7 +222,7 @@ public class LibraryLoader {
       }
     }
 
-    return new String[] {}; // library dependancy load chain unspecified -
+    return new String[] {}; // library dependency load chain unspecified -
                             // probably client call
   }
 

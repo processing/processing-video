@@ -5,6 +5,7 @@
 
   Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2011-12 Ben Fry and Casey Reas
+  GStreamer implementation ported from GSVideo library by Andres Colubri
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -43,12 +44,6 @@ public class Video implements PConstants {
   // comments in initImpl() below).
   protected static String gstreamerLibPath = "";
   protected static String gstreamerPluginPath = "";
- 
-  // Direct buffer pass enabled by default. With this mode enabled, no new 
-  // buffers are created and disposed by the GC in each frame (thanks to Octavi 
-  // Estape for suggesting this improvement) which should help performance in 
-  // most situations.
-  protected static boolean passDirectBuffer = true; 
 
   // OpenGL texture used as buffer sink by default, when the renderer is 
   // GL-based. This can improve performance significantly, since the video 

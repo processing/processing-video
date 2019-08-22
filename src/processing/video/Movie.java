@@ -5,6 +5,7 @@
 
   Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2004-12 Ben Fry and Casey Reas
+  GStreamer implementation ported from GSVideo library by Andres Colubri
   The previous version of this code was developed by Hernando Barragan
 
   This library is free software; you can redistribute it and/or
@@ -99,7 +100,7 @@ public class Movie extends PImage implements PConstants {
   
 
   /**
-   * Creates an instance of GSMovie loading the movie from filename.
+   * Creates an instance of Movie loading the movie from filename.
    *
    * @param parent PApplet
    * @param filename String
@@ -469,7 +470,7 @@ public class Movie extends PImage implements PConstants {
   
   /**
    * Check if this movie object is currently playing.
-   */  
+   */
   public boolean isPlaying() {
     return playing;
   }
@@ -485,7 +486,7 @@ public class Movie extends PImage implements PConstants {
 
   /**
    * Check if this movie object is currently looping.
-   */  
+   */
   public boolean isLooping() {
     return repeat;
   }
@@ -581,7 +582,7 @@ public class Movie extends PImage implements PConstants {
 
   /**
    * Uses a generic object as handler of the movie. This object should have a
-   * movieEvent method that receives a GSMovie argument. This method will
+   * movieEvent method that receives a Movie argument. This method will
    * be called upon a new frame read event.
    *
    */
@@ -791,7 +792,7 @@ public class Movie extends PImage implements PConstants {
     public FlowReturn newSample(AppSink sink) {
       Sample sample = sink.pullSample();
 
-      // pull out metadata from caps
+      // Pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
       nativeWidth = capsStruct.getInteger("width");
       nativeHeight = capsStruct.getInteger("height");
@@ -817,7 +818,7 @@ public class Movie extends PImage implements PConstants {
         bufWidth = nativeWidth;
         bufHeight = nativeHeight;        
         
-        if (useBufferSink && bufferSink != null) { // The native buffer from gstreamer is copied to the buffer sink.
+        if (useBufferSink && bufferSink != null) { // The native buffer from GStreamer is copied to the buffer sink.
                     
           try {
             sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
@@ -830,8 +831,7 @@ public class Movie extends PImage implements PConstants {
             bufferLock.unlock();
           }        
           
-        } else {
-          
+        } else {          
           IntBuffer rgb = bb.asIntBuffer();
 
           if (copyPixels == null) {

@@ -5,6 +5,7 @@
 
   Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2011-12 Ben Fry and Casey Reas
+  GStreamer implementation ported from GSVideo library by Andres Colubri
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -29,7 +30,7 @@ import java.net.URL;
 import com.sun.jna.Platform;
 
 class LibraryPath {
-  // This method returns the folder inside which the gstreamer library folder
+  // This method returns the folder inside which the GStreamer library folder
   // is located.
   String get() {
     URL url = this.getClass().getResource("LibraryPath.class");
