@@ -6,6 +6,7 @@
   Copyright (c) 2012-19 The Processing Foundation
   Copyright (c) 2011-12 Ben Fry and Casey Reas
   GStreamer implementation ported from GSVideo library by Andres Colubri
+  Library loader based on code by Tal Shalif
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -34,8 +35,6 @@ import com.sun.jna.Platform;
  
 /**
  * This class loads the gstreamer native libraries.
- * By Andres Colubri
- * Based on code by Tal Shalif
  * 
  */
 public class LibraryLoader {
@@ -286,7 +285,7 @@ public class LibraryLoader {
         String s = String.format(fmt, name);
         //System.out.println("Trying to load library file " + s);
         Object obj = Native.loadLibrary(s, clazz);
-        //System.out.println("Loaded library " + s + " succesfully!");
+        //System.out.println("Loaded library " + s + " successfully!");
         return obj;
       } catch (UnsatisfiedLinkError ex) {
         linkError = ex;
