@@ -86,7 +86,7 @@ public class Movie extends PImage implements PConstants {
   protected int[] copyPixels = null;
 
   protected boolean firstFrame = true;
-  protected boolean seeking = false;
+//  protected boolean seeking = false;
 
   protected boolean useBufferSink = false;
   protected boolean outdatedPixels = true;
@@ -172,13 +172,36 @@ public class Movie extends PImage implements PConstants {
    * @brief Sets the target frame rate
    */
   public void frameRate(float ifps) {
-    if (seeking) return;
+//    if (seeking) return;
 
     // We calculate the target ratio in the case both the
     // current and target framerates are valid (greater than
     // zero), otherwise we leave it as 1.
     float f = (0 < ifps && 0 < frameRate) ? ifps / frameRate : 1;
-
+    
+    long t = playbin.queryPosition(TimeUnit.NANOSECONDS);
+    long start, stop;
+    if (rate > 0) {
+      start = t;
+      stop = -1;
+    } else {
+      start = 0;
+      stop = t;
+    }
+    
+    Gst.invokeLater(new Runnable() {
+      public void run() {
+        boolean res = playbin.seek(rate * f, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
+        if (!res) {
+          PGraphics.showWarning("Seek operation failed.");
+        }        
+      }
+    });
+    
+    frameRate = ifps;
+    
+    
+    /*
     if (playing) {
       playbin.pause();
       playbin.getState();
@@ -211,6 +234,7 @@ public class Movie extends PImage implements PConstants {
     }
 
     frameRate = ifps;
+    */
   }
 
 
@@ -291,7 +315,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Jumps to a specific location
    */
   public void jump(float where) {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
@@ -304,54 +328,16 @@ public class Movie extends PImage implements PConstants {
       where = frame / nativeFrameRate;
     }
 
-    boolean res;
     long pos = Video.secToNanoLong(where);
 
-    res = playbin.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, pos, SeekType.NONE, -1);
-
-    if (!res) {
-      PGraphics.showWarning("Seek operation failed.");
-    }
-
-    // getState() will wait until any async state change
-    // (like seek in this case) has completed
-    seeking = true;
-    playbin.getState();
-    seeking = false;    
-    /*
-    if (seeking) return; // don't seek again until the current seek operation is done.
-
-    if (!sinkReady) {
-      initSink();
-    }
-
-    // Round the time to a multiple of the source framerate, in
-    // order to eliminate stutter. Suggested by Daniel Shiffman    
-    float fps = getSourceFrameRate();
-    int frame = (int)(where * fps);
-    final float seconds = frame / fps;
-    
-    // Put the seek operation inside a thread to avoid blocking the main 
-    // animation thread
-    Thread seeker = new Thread() {
-      @Override
+    Gst.invokeLater(new Runnable() {
       public void run() {
-        long pos = Video.secToNanoLong(seconds);
-        boolean res = playbin.seek(rate, Format.TIME, SeekFlags.FLUSH,
-                                   SeekType.SET, pos, SeekType.NONE, -1);
+        boolean res = playbin.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, pos, SeekType.NONE, -1);
         if (!res) {
           PGraphics.showWarning("Seek operation failed.");
-        }
-
-        // getState() will wait until any async state change
-        // (like seek in this case) has completed
-        seeking = true;
-        playbin.getState();
-        seeking = false;        
+        }        
       }
-    };
-    seeker.start();    
-    */
+    });
   }
 
 
@@ -383,7 +369,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Plays movie one time and stops at the last frame
    */
   public void play() {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
@@ -408,7 +394,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Plays a movie continuously, restarting it when it's over.
    */
   public void loop() {
-    if (seeking) return;
+//    if (seeking) return;
 
     repeat = true;
     play();
@@ -428,7 +414,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Stops the movie from looping
    */
   public void noLoop() {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
@@ -451,7 +437,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Pauses the movie
    */
   public void pause() {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
@@ -477,7 +463,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Stops the movie
    */
   public void stop() {
-    if (seeking) return;
+//    if (seeking) return;
 
     if (!sinkReady) {
       initSink();
