@@ -211,6 +211,7 @@ public class Video implements PConstants {
     }
 
     if (PApplet.platform == WINDOWS) {
+      // Pre-loading base GStreamer libraries on Windows, otherwise nothing works
       LibraryLoader loader = LibraryLoader.getInstance();
       if (loader == null) {
         System.err.println("Cannot load GStreamer libraries.");
@@ -222,8 +223,8 @@ public class Video implements PConstants {
     Gst.init("Processing core video", args);
    
     if (!usingGStreamerSystemInstall) {
-      // Instead of setting the plugin path via scanPath(), we could alternatively
-      // also set the GST_PLUGIN_PATH_1_0 environment variable
+      // Plugins are scanned explicitly from the bindings if using the
+      // local GStreamer
       addPlugins();      
     }
   
@@ -235,7 +236,7 @@ public class Video implements PConstants {
   static protected void printGStreamerInfo() {
     System.out.println("GStreamer version: " + Gst.getVersion());
     if (!gstreamerPluginPath.contentEquals("")) System.out.println("GStreamer library path: " + gstreamerLibPath);
-    if (!gstreamerPluginPath.contentEquals("")) System.out.println("GStreamer library path: " + gstreamerPluginPath);
+    if (!gstreamerPluginPath.contentEquals("")) System.out.println("GStreamer plugin path: " + gstreamerPluginPath);
   }
 
   
@@ -245,8 +246,7 @@ public class Video implements PConstants {
       boolean res;
       res = reg.scanPath(gstreamerPluginPath);
       if (!res) {
-        System.err.println("Cannot load GStreamer plugins from " +
-                           gstreamerPluginPath);
+        System.err.println("Cannot load GStreamer plugins from " + gstreamerPluginPath);
       }
     }
   }
