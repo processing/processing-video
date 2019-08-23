@@ -688,8 +688,8 @@ public class Capture extends PImage implements PConstants {
 	  int count = 1;
 	  
 	  for(int i = 0; i < devices.size(); i++) {
-		  if(devices.get(i).getDisplayName().equals(d.getDisplayName())){
-			  if(i == pos) {
+		  if (devices.get(i).getDisplayName().equals(d.getDisplayName())){
+			  if (i == pos) {
 				  s = d.getDisplayName() + " #" + Integer.toString(count);
 			  }		
 			  count++;
@@ -702,7 +702,7 @@ public class Capture extends PImage implements PConstants {
   static private int checkCameraDuplicates(Device d) {
 	  int count = 0;
 	  for (int i = 0; i < devices.size(); i++) {
-		  if(devices.get(i).getDisplayName().equals(d.getDisplayName())) {
+		  if (devices.get(i).getDisplayName().equals(d.getDisplayName())) {
 			  count++;
 		  }
 	  }    
