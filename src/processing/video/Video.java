@@ -39,6 +39,10 @@ import java.util.List;
  * this library.
  */
 public class Video implements PConstants {
+  // Allows to set the amount of desired debug output from GStreamer, according to the following table:
+  // https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html?gi-language=c#printing-debug-information
+  public static int DEBUG_LEVEL = 2;
+  
   protected static boolean usingGStreamerSystemInstall = false;
   
   // Path that the video library will use to load the GStreamer base libraries 
@@ -190,9 +194,7 @@ public class Video implements PConstants {
       System.setProperty("jna.library.path", gstreamerLibPath);
     }
     
-    // Only log fatal errors, see developer docs for all debug levels:
-    // https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html?gi-language=c#printing-debug-information
-    Environment.libc.setenv("GST_DEBUG", "2", 1);    
+    Environment.libc.setenv("GST_DEBUG", String.valueOf(DEBUG_LEVEL), 1);    
 
     if (!usingGStreamerSystemInstall) {
       // Disable the use of gst-plugin-scanner on environments where we're
@@ -225,7 +227,7 @@ public class Video implements PConstants {
     if (!usingGStreamerSystemInstall) {
       // Plugins are scanned explicitly from the bindings if using the
       // local GStreamer
-      addPlugins();      
+      addPlugins();
     }
   
     // output GStreamer version, lib path, plugin path
