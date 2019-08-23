@@ -270,6 +270,7 @@ public class Capture extends PImage implements PConstants {
     Gst.invokeLater(new Runnable() {
       public void run() {
         pipeline.play();
+        pipeline.getState();
       }
     });
     
@@ -292,6 +293,7 @@ public class Capture extends PImage implements PConstants {
     Gst.invokeLater(new Runnable() {
       public void run() {
         pipeline.stop();
+        pipeline.getState();
       }
     });    
     
@@ -554,11 +556,10 @@ public class Capture extends PImage implements PConstants {
   private void seek(double rate, long start, long stop) {
     Gst.invokeLater(new Runnable() {
       public void run() {
-        boolean res = pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);  
+        boolean res = pipeline.seek(rate, Format.TIME, EnumSet.of(SeekFlags.FLUSH, SeekFlags.ACCURATE), SeekType.SET, start, SeekType.SET, stop);
         if (!res) {
           PGraphics.showWarning("Seek operation failed.");
         }
-        pipeline.getState(10, TimeUnit.MILLISECONDS);
       }
     });    
   }

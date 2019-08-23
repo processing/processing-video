@@ -41,7 +41,7 @@ import java.util.List;
 public class Video implements PConstants {
   // Allows to set the amount of desired debug output from GStreamer, according to the following table:
   // https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html?gi-language=c#printing-debug-information
-  public static int DEBUG_LEVEL = 2;
+  public static int DEBUG_LEVEL = 1;
   
   protected static boolean usingGStreamerSystemInstall = false;
   

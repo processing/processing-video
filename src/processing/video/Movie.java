@@ -290,6 +290,7 @@ public class Movie extends PImage implements PConstants {
     Gst.invokeLater(new Runnable() {
       public void run() {
         playbin.play();
+        playbin.getState();
       }
     });
     
@@ -344,6 +345,7 @@ public class Movie extends PImage implements PConstants {
     Gst.invokeLater(new Runnable() {
       public void run() {
         playbin.pause();
+        playbin.getState();
       }
     });
 
@@ -368,6 +370,7 @@ public class Movie extends PImage implements PConstants {
     Gst.invokeLater(new Runnable() {
       public void run() {
         playbin.stop();
+        playbin.getState();
       }
     });
     
@@ -421,6 +424,7 @@ public class Movie extends PImage implements PConstants {
       Gst.invokeLater(new Runnable() {
         public void run() {
           playbin.setVolume(v);
+          playbin.getState();
         }
       });      
       volume = v;
@@ -680,7 +684,6 @@ public class Movie extends PImage implements PConstants {
         if (!res) {
           PGraphics.showWarning("Seek operation failed.");
         }
-        playbin.getState(10, TimeUnit.MILLISECONDS);
       }
     });    
   }
