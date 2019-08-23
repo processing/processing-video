@@ -287,13 +287,6 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
     
-//    Gst.invokeLater(new Runnable() {
-//      public void run() {
-//        playbin.play();
-//        playbin.getState();
-//      }
-//    });
-    
     playbin.play();
     playbin.getState();    
     
@@ -345,13 +338,6 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
 
-//    Gst.invokeLater(new Runnable() {
-//      public void run() {
-//        playbin.pause();
-//        playbin.getState();
-//      }
-//    });
-    
     playbin.pause();
     playbin.getState();    
 
@@ -373,13 +359,6 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
 
-//    Gst.invokeLater(new Runnable() {
-//      public void run() {
-//        playbin.stop();
-//        playbin.getState();
-//      }
-//    });
-    
     playbin.stop();
     playbin.getState();    
     
@@ -430,12 +409,7 @@ public class Movie extends PImage implements PConstants {
    */
   public void volume(float v) {
     if (playing && PApplet.abs(volume - v) > 0.001f) {
-//      Gst.invokeLater(new Runnable() {
-//        public void run() {
-//          playbin.setVolume(v);
-//          playbin.getState();
-//        }
-//      });
+
       playbin.setVolume(v);
       playbin.getState();      
       

@@ -42,15 +42,15 @@ public class Video implements PConstants {
   // Allows to set the amount of desired debug output from GStreamer, according to the following table:
   // https://gstreamer.freedesktop.org/documentation/tutorials/basic/debugging-tools.html?gi-language=c#printing-debug-information
   public static int DEBUG_LEVEL = 1;
-  
-  protected static boolean usingGStreamerSystemInstall = false;
-  
+
   // Path that the video library will use to load the GStreamer base libraries 
   // and plugins from. They can be passed from the application using the 
   // gstreamer.library.path and gstreamer.plugin.path system variables (see
   // comments in initImpl() below).
-  protected static String gstreamerLibPath = "";
-  protected static String gstreamerPluginPath = "";
+  public static String gstreamerLibPath = "";
+  public static String gstreamerPluginPath = "";  
+  
+  protected static boolean usingGStreamerSystemInstall = false;
 
   // OpenGL texture used as buffer sink by default, when the renderer is 
   // GL-based. This can improve performance significantly, since the video 
@@ -236,9 +236,7 @@ public class Video implements PConstants {
   }
 
   static protected void printGStreamerInfo() {
-    System.out.println("GStreamer version: " + Gst.getVersion());
-    if (!gstreamerPluginPath.contentEquals("")) System.out.println("GStreamer library path: " + gstreamerLibPath);
-    if (!gstreamerPluginPath.contentEquals("")) System.out.println("GStreamer plugin path: " + gstreamerPluginPath);
+    System.out.println("Processing video library using GStreamer " + Gst.getVersion());
   }
 
   

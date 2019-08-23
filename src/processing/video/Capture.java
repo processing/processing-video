@@ -267,13 +267,6 @@ public class Capture extends PImage implements PConstants {
       initSink();
     }
 
-//    Gst.invokeLater(new Runnable() {
-//      public void run() {
-//        pipeline.play();
-//        pipeline.getState();
-//      }
-//    });
-    
     pipeline.play();
     pipeline.getState();    
     
@@ -293,13 +286,6 @@ public class Capture extends PImage implements PConstants {
       initSink();
     }
 
-//    Gst.invokeLater(new Runnable() {
-//      public void run() {
-//        pipeline.stop();
-//        pipeline.getState();
-//      }
-//    });
-    
     pipeline.stop();
     pipeline.getState();    
     
