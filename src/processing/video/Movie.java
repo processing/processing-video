@@ -287,12 +287,15 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
     
-    Gst.invokeLater(new Runnable() {
-      public void run() {
-        playbin.play();
-        playbin.getState();
-      }
-    });
+//    Gst.invokeLater(new Runnable() {
+//      public void run() {
+//        playbin.play();
+//        playbin.getState();
+//      }
+//    });
+    
+    playbin.play();
+    playbin.getState();    
     
     playing = true;
     paused = false;
@@ -342,12 +345,15 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
 
-    Gst.invokeLater(new Runnable() {
-      public void run() {
-        playbin.pause();
-        playbin.getState();
-      }
-    });
+//    Gst.invokeLater(new Runnable() {
+//      public void run() {
+//        playbin.pause();
+//        playbin.getState();
+//      }
+//    });
+    
+    playbin.pause();
+    playbin.getState();    
 
     playing = false;
     paused = true;    
@@ -367,12 +373,15 @@ public class Movie extends PImage implements PConstants {
       initSink();
     }
 
-    Gst.invokeLater(new Runnable() {
-      public void run() {
-        playbin.stop();
-        playbin.getState();
-      }
-    });
+//    Gst.invokeLater(new Runnable() {
+//      public void run() {
+//        playbin.stop();
+//        playbin.getState();
+//      }
+//    });
+    
+    playbin.stop();
+    playbin.getState();    
     
     playing = false;
     paused = false;    
@@ -421,12 +430,15 @@ public class Movie extends PImage implements PConstants {
    */
   public void volume(float v) {
     if (playing && PApplet.abs(volume - v) > 0.001f) {
-      Gst.invokeLater(new Runnable() {
-        public void run() {
-          playbin.setVolume(v);
-          playbin.getState();
-        }
-      });      
+//      Gst.invokeLater(new Runnable() {
+//        public void run() {
+//          playbin.setVolume(v);
+//          playbin.getState();
+//        }
+//      });
+      playbin.setVolume(v);
+      playbin.getState();      
+      
       volume = v;
     }
   }
