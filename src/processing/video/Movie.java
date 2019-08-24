@@ -75,7 +75,7 @@ public class Movie extends PImage implements PConstants {
   protected Object eventHandler;
 
   protected boolean available;
-  protected boolean sinkReady;
+  protected boolean ready;
   protected boolean newFrame;
 
   protected AppSink rgbSink = null;
@@ -244,9 +244,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Jumps to a specific location
    */
   public void jump(float where) {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
 
     // Round the time to a multiple of the source framerate, in
     // order to eliminate stutter. Suggested by Daniel Shiffman
@@ -280,9 +278,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Plays movie one time and stops at the last frame
    */
   public void play() {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
     
     playbin.play();
     playbin.getState();    
@@ -314,9 +310,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Stops the movie from looping
    */
   public void noLoop() {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
 
     repeat = false;
   }
@@ -331,9 +325,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Pauses the movie
    */
   public void pause() {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
 
     playbin.pause();
     playbin.getState();    
@@ -352,9 +344,7 @@ public class Movie extends PImage implements PConstants {
    * @brief Stops the movie
    */
   public void stop() {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
 
     playbin.stop();
     playbin.getState();    
@@ -545,6 +535,11 @@ public class Movie extends PImage implements PConstants {
       parent.die("Could not load movie file " + filename, null);
     }
 
+    initSink();
+    
+    playbin.setVideoSink(rgbSink);
+    makeBusConnections(playbin.getBus());    
+    
     // We've got a valid movie! let's rock.
     try {
       this.filename = filename; // for error messages
@@ -560,7 +555,7 @@ public class Movie extends PImage implements PConstants {
       frameRate = -1;
       rate = 1.0f;
       volume = -1;
-      sinkReady = false;      
+      ready = false;      
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -595,7 +590,7 @@ public class Movie extends PImage implements PConstants {
 
 
   protected void initSink() {        
-    rgbSink = new AppSink("sink");
+    rgbSink = new AppSink("movie sink");
     rgbSink.set("emit-signals", true);
     newSampleListener = new NewSampleListener();
     newPrerollListener = new NewPrerollListener();
@@ -609,14 +604,15 @@ public class Movie extends PImage implements PConstants {
     } else {
       rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
     }
-    
-    playbin.setVideoSink(rgbSink);
-
-    makeBusConnections(playbin.getBus());
-    playbin.setState(org.freedesktop.gstreamer.State.READY);
-    
-    sinkReady = true;
-    newFrame = false;
+  }
+  
+  
+  protected void setReady() {
+    if (!ready) {
+      playbin.setState(org.freedesktop.gstreamer.State.READY); 
+      newFrame = false;
+      ready = true;
+    }
   }
 
   
