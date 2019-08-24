@@ -45,11 +45,11 @@ else
   SRC_FILE="$GST_PKG_URL/$GST_VERSION/gstreamer-1.0-$GST_VERSION-x86_64.pkg"
   DEST_FILE="$DOWNLOAD_PATH/gstreamer-1.0-$GST_VERSION-x86_64.pkg"
 
-  # curl $SRC_FILE --output $DEST_FILE
+  curl $SRC_FILE --output $DEST_FILE
 
   sudo installer -pkg $DOWNLOAD_PATH/gstreamer-1.0-$GST_VERSION-x86_64.pkg -target $TARGET_PATH
 
-  # rm $DOWNLOAD_PATH/gstreamer-1.0-$GST_VERSION-x86_64.pkg
+  rm $DOWNLOAD_PATH/gstreamer-1.0-$GST_VERSION-x86_64.pkg
 
   echo "DONE..."  
 fi
