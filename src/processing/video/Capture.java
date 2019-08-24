@@ -68,7 +68,7 @@ public class Capture extends PImage implements PConstants {
   protected Object eventHandler;
 
   protected boolean available;
-  protected boolean sinkReady;
+  protected boolean ready;
   protected boolean newFrame;
 
   protected AppSink rgbSink = null;
@@ -260,9 +260,7 @@ public class Capture extends PImage implements PConstants {
    * @brief Starts video capture
    */
   public void start() {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
 
     pipeline.play();
     pipeline.getState();    
@@ -279,9 +277,7 @@ public class Capture extends PImage implements PConstants {
    * @brief Stops video capture
    */
   public void stop() {
-    if (!sinkReady) {
-      initSink();
-    }
+    setReady();
 
     pipeline.stop();
     pipeline.getState();    
@@ -385,74 +381,14 @@ public class Capture extends PImage implements PConstants {
 
     Video.init();
 
-
-    Element srcElement = null;
-    if (device == null) {
-
-      // Use the default device from GStreamer
-      srcElement = ElementFactory.make("autovideosrc", null);
-
-    } else {
-      
-      // Look for device
-      if (devices == null) {
-        DeviceMonitor monitor = new DeviceMonitor();
-        monitor.addFilter("Video/Source", null);
-        devices = monitor.getDevices();
-        monitor.close();
-      }
-      
-      
-      for (int i=0; i < devices.size(); i++) {  
-    	String deviceName = assignDisplayName(devices.get(i), i);
-        if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
-          // Found device
-          srcElement = devices.get(i).createElement(null);
-          break;
-        }
-      }
-
-      // Error out if we got passed an invalid device name
-      if (srcElement == null) {
-        throw new RuntimeException("Could not find device " + device);
-      }
-
-    }
-
-    pipeline = new Pipeline();
-    useBufferSink = Video.useGLBufferSink && parent.g.isGL();
-
-    Element videoscale = ElementFactory.make("videoscale", null);
-    Element videoconvert = ElementFactory.make("videoconvert", null);
-    Element capsfilter = ElementFactory.make("capsfilter", null);
-
-    String frameRateString;
-    if (frameRate != 0.0) {
-      frameRateString = ", framerate=" + fpsToFramerate(frameRate);
-    } else {
-      frameRateString = "";
-    }
-    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
-
-    rgbSink = new AppSink("sink");
-    rgbSink.set("emit-signals", true);
-    newSampleListener = new NewSampleListener();
-    newPrerollListener = new NewPrerollListener();        
-    rgbSink.connect(newSampleListener);
-    rgbSink.connect(newPrerollListener);
-
-    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-      if (useBufferSink) rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBx"));
-      else rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
-    } else {
-      rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
-    }
+    device = device.trim();
     
-    pipeline.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
-    Pipeline.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
-
-    makeBusConnections(pipeline.getBus());
-
+    int p = device.indexOf("pipeline:");
+    if (p == 0) {
+      initCustomPipeline(device.substring(9));      
+    } else {
+      initDevicePipeline();
+    }
 
     try {
       // Register methods
@@ -465,7 +401,7 @@ public class Capture extends PImage implements PConstants {
       sourceFrameRate = -1;
       frameRate = -1;
       rate = 1.0f;
-      sinkReady = false;
+      ready = false;
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -485,6 +421,97 @@ public class Capture extends PImage implements PConstants {
     }
   }
 
+  
+  protected void initCustomPipeline(String pstr) {
+    String[] parts = pstr.split("!");
+    int n = parts.length;
+    
+    Element[] elements = new Element[n + 4];
+    
+    for (int i = 0; i < n; i++) {
+      String el = parts[i].trim();
+      elements[i] = ElementFactory.make(el, null);
+    }
+    
+    pipeline = new Pipeline();
+
+    Element videoscale = ElementFactory.make("videoscale", null);
+    Element videoconvert = ElementFactory.make("videoconvert", null);
+    Element capsfilter = ElementFactory.make("capsfilter", null);
+
+    String frameRateString;
+    if (frameRate != 0.0) {
+      frameRateString = ", framerate=" + fpsToFramerate(frameRate);
+    } else {
+      frameRateString = "";
+    }
+    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
+    
+    initSink();
+    
+    elements[n + 0] = videoscale;
+    elements[n + 1] = videoconvert;
+    elements[n + 2] = capsfilter;
+    elements[n + 3] = rgbSink;
+    
+    pipeline.addMany(elements);
+    Pipeline.linkMany(elements);
+
+    makeBusConnections(pipeline.getBus());
+  }
+  
+  
+  protected void initDevicePipeline() {
+    Element srcElement = null;
+    if (device == null) {
+      // Use the default device from GStreamer
+      srcElement = ElementFactory.make("autovideosrc", null);
+    } else {      
+      // Look for device
+      if (devices == null) {
+        DeviceMonitor monitor = new DeviceMonitor();
+        monitor.addFilter("Video/Source", null);
+        devices = monitor.getDevices();
+        monitor.close();
+      }
+      
+      for (int i=0; i < devices.size(); i++) {  
+      String deviceName = assignDisplayName(devices.get(i), i);
+        if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
+          // Found device
+          srcElement = devices.get(i).createElement(null);
+          break;
+        }
+      }
+
+      // Error out if we got passed an invalid device name
+      if (srcElement == null) {
+        throw new RuntimeException("Could not find device " + device);
+      }
+    }
+
+    pipeline = new Pipeline();
+
+    Element videoscale = ElementFactory.make("videoscale", null);
+    Element videoconvert = ElementFactory.make("videoconvert", null);
+    Element capsfilter = ElementFactory.make("capsfilter", null);
+
+    String frameRateString;
+    if (frameRate != 0.0) {
+      frameRateString = ", framerate=" + fpsToFramerate(frameRate);
+    } else {
+      frameRateString = "";
+    }
+    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
+    
+    initSink();
+    
+    pipeline.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+    Pipeline.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+
+    makeBusConnections(pipeline.getBus());     
+  }
+  
 
   /**
    * Uses a generic object as handler of the capture. This object should have a
@@ -514,10 +541,30 @@ public class Capture extends PImage implements PConstants {
 
 
   protected void initSink() {
-    pipeline.setState(org.freedesktop.gstreamer.State.READY);
-    sinkReady = true;
-    newFrame = false;
+    rgbSink = new AppSink("capture sink");
+    rgbSink.set("emit-signals", true);
+    newSampleListener = new NewSampleListener();
+    newPrerollListener = new NewPrerollListener();        
+    rgbSink.connect(newSampleListener);
+    rgbSink.connect(newPrerollListener);
+
+    useBufferSink = Video.useGLBufferSink && parent.g.isGL();
+    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+      if (useBufferSink) rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBx"));
+      else rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+    } else {
+      rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
+    }
   }
+  
+  
+  protected void setReady() {
+    if (!ready) {
+      pipeline.setState(org.freedesktop.gstreamer.State.READY);
+      newFrame = false;
+      ready = true;
+    }
+  }  
 
 
   private void makeBusConnections(Bus bus) {
