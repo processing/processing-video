@@ -54,18 +54,15 @@ import org.freedesktop.gstreamer.event.SeekType;
 public class Capture extends PImage implements PConstants {  
   public Pipeline pipeline;
   
-  public int nativeWidth;
-  public int nativeHeight;
-  public float nativeFrameRate;
+  // The source resolution and framerate of the device  
+  public int sourceWidth;
+  public int sourceHeight;
+  public float sourceFrameRate;
   
-  public float frameRate;
+  public float frameRate;  
+  protected float rate;
   
   protected boolean capturing = false;
-
-  protected float rate;
-  protected int bufWidth;
-  protected int bufHeight;
-  protected float volume;
 
   protected Method captureEventMethod;
   protected Object eventHandler;
@@ -302,7 +299,7 @@ public class Capture extends PImage implements PConstants {
    */
   public synchronized void read() {
     if (firstFrame) {
-      super.init(bufWidth, bufHeight, RGB, 1);
+      super.init(sourceWidth, sourceHeight, RGB, 1);
       firstFrame = false;
     }
 
@@ -464,10 +461,11 @@ public class Capture extends PImage implements PConstants {
 
       setEventHandlerObject(parent);
 
+      sourceWidth = sourceHeight = 0;
+      sourceFrameRate = -1;
+      frameRate = -1;
       rate = 1.0f;
-      volume = -1;
       sinkReady = false;
-      bufWidth = bufHeight = 0;
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -711,15 +709,15 @@ public class Capture extends PImage implements PConstants {
       
       // Pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
-      nativeWidth = capsStruct.getInteger("width");
-      nativeHeight = capsStruct.getInteger("height");
+      sourceWidth = capsStruct.getInteger("width");
+      sourceHeight = capsStruct.getInteger("height");
       Fraction fps = capsStruct.getFraction("framerate");
-      nativeFrameRate = (float)fps.numerator / fps.denominator;
+      sourceFrameRate = (float)fps.numerator / fps.denominator;
       
       // Set the playback rate to the file's native framerate
       // unless the user has already set a custom one
       if (frameRate == -1.0) {
-        frameRate = nativeFrameRate;
+        frameRate = sourceFrameRate;
       }      
       
       Buffer buffer = sample.getBuffer();
@@ -732,13 +730,10 @@ public class Capture extends PImage implements PConstants {
         }
 
         available = true;
-        bufWidth = nativeWidth;
-        bufHeight = nativeHeight;
-                
         if (useBufferSink && bufferSink != null) { // The native buffer from GStreamer is copied to the buffer sink.
           
           try {
-            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
+            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, sourceWidth, sourceHeight });
             if (capturing) {
               fireCaptureEvent();
             }             
@@ -752,7 +747,7 @@ public class Capture extends PImage implements PConstants {
           IntBuffer rgb = bb.asIntBuffer();
 
           if (copyPixels == null) {
-            copyPixels = new int[nativeWidth * nativeHeight];
+            copyPixels = new int[sourceWidth * sourceHeight];
           }
 
           try {
@@ -781,66 +776,16 @@ public class Capture extends PImage implements PConstants {
       
       // Pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
-      nativeWidth = capsStruct.getInteger("width");
-      nativeHeight = capsStruct.getInteger("height");
+      sourceWidth = capsStruct.getInteger("width");
+      sourceHeight = capsStruct.getInteger("height");
       Fraction fps = capsStruct.getFraction("framerate");
-      nativeFrameRate = (float)fps.numerator / fps.denominator;
+      sourceFrameRate = (float)fps.numerator / fps.denominator;
       
       // Set the playback rate to the file's native framerate
       // unless the user has already set a custom one
       if (frameRate == -1.0) {
-        frameRate = nativeFrameRate;
+        frameRate = sourceFrameRate;
       } 
-      
-      /*
-      Buffer buffer = sample.getBuffer();
-      ByteBuffer bb = buffer.map(false);
-      if (bb != null) {
-        
-        // If the EDT is still copying data from the buffer, just drop this frame
-        if (!bufferLock.tryLock()) {
-          return FlowReturn.OK;
-        }
-
-        available = true;
-        bufWidth = w;
-        bufHeight = h;
-                
-        if (useBufferSink && bufferSink != null) { // The native buffer from GStreamer is copied to the buffer sink.
-          
-          try {
-            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
-            if (capturing) {
-              fireCaptureEvent();
-            }             
-          } catch (Exception e) {
-            e.printStackTrace();
-          } finally {
-            bufferLock.unlock();
-          }        
-          
-        } else {
-          IntBuffer rgb = bb.asIntBuffer();
-
-          if (copyPixels == null) {
-            copyPixels = new int[w * h];
-          }
-
-          try {
-            rgb.get(copyPixels, 0, width * height);
-            if (capturing) {
-              fireCaptureEvent();
-            }
-          } finally {
-            bufferLock.unlock();
-          }
-          
-        }
-
-        buffer.unmap();
-      }
-      */
-      
       
       sample.dispose();
       return FlowReturn.OK;

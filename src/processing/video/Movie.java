@@ -57,22 +57,19 @@ public class Movie extends PImage implements PConstants {
   public String filename;
   public PlayBin playbin;
   
-  // The native resolution and framerate of the file
-  public int nativeWidth;
-  public int nativeHeight;
-  public float nativeFrameRate;
+  // The source resolution and framerate of the file
+  public int sourceWidth;
+  public int sourceHeight;
+  public float sourceFrameRate;
   
-  public float frameRate;             // the current playback fps
-  
+  public float frameRate;             // the current playback fps  
   protected float rate;               // speed multiplier (1.0: frameRate = nativeFrameRate)
 
+  protected float volume;
+  
   protected boolean playing = false;
   protected boolean paused = false;
   protected boolean repeat = false;
-
-  protected int bufWidth;
-  protected int bufHeight;
-  protected float volume;
 
   protected Method movieEventMethod;
   protected Object eventHandler;
@@ -253,9 +250,9 @@ public class Movie extends PImage implements PConstants {
 
     // Round the time to a multiple of the source framerate, in
     // order to eliminate stutter. Suggested by Daniel Shiffman
-    if (nativeFrameRate != -1) {
-      int frame = (int)(where * nativeFrameRate);
-      where = frame / nativeFrameRate;
+    if (sourceFrameRate != -1) {
+      int frame = (int)(where * sourceFrameRate);
+      where = frame / sourceFrameRate;
     }
 
     long pos = Video.secToNanoLong(where);
@@ -376,7 +373,7 @@ public class Movie extends PImage implements PConstants {
    */
   public synchronized void read() {
     if (firstFrame) {
-      super.init(bufWidth, bufHeight, RGB, 1);
+      super.init(sourceWidth, sourceHeight, RGB, 1);
       firstFrame = false;
     }
 
@@ -558,12 +555,12 @@ public class Movie extends PImage implements PConstants {
 
       setEventHandlerObject(parent);
 
-      nativeFrameRate = -1;
+      sourceWidth = sourceHeight = 0;
+      sourceFrameRate = -1;
       frameRate = -1;
       rate = 1.0f;
       volume = -1;
-      sinkReady = false;
-      bufWidth = bufHeight = 0;
+      sinkReady = false;      
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -783,15 +780,15 @@ public class Movie extends PImage implements PConstants {
 
       // Pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
-      nativeWidth = capsStruct.getInteger("width");
-      nativeHeight = capsStruct.getInteger("height");
+      sourceWidth = capsStruct.getInteger("width");
+      sourceHeight = capsStruct.getInteger("height");
       Fraction fps = capsStruct.getFraction("framerate");
-      nativeFrameRate = (float)fps.numerator / fps.denominator;
+      sourceFrameRate = (float)fps.numerator / fps.denominator;
 
       // Set the playback rate to the file's native framerate
       // unless the user has already set a custom one
       if (frameRate == -1.0) {
-        frameRate = nativeFrameRate;
+        frameRate = sourceFrameRate;
       }
 
       Buffer buffer = sample.getBuffer();
@@ -803,14 +800,11 @@ public class Movie extends PImage implements PConstants {
           return FlowReturn.OK;
         }
         
-        available = true;
-        bufWidth = nativeWidth;
-        bufHeight = nativeHeight;        
-        
+        available = true;        
         if (useBufferSink && bufferSink != null) { // The native buffer from GStreamer is copied to the buffer sink.
                     
           try {
-            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, bufWidth, bufHeight });
+            sinkCopyMethod.invoke(bufferSink, new Object[] { buffer, bb, sourceWidth, sourceHeight });
             if (playing) {
               fireMovieEvent();
             }             
@@ -824,7 +818,7 @@ public class Movie extends PImage implements PConstants {
           IntBuffer rgb = bb.asIntBuffer();
 
           if (copyPixels == null) {
-            copyPixels = new int[nativeWidth * nativeHeight];
+            copyPixels = new int[sourceWidth * sourceHeight];
           }
           
           try {
@@ -853,20 +847,19 @@ public class Movie extends PImage implements PConstants {
 
       // Pull out metadata from caps
       Structure capsStruct = sample.getCaps().getStructure(0);
-      nativeWidth = capsStruct.getInteger("width");
-      nativeHeight = capsStruct.getInteger("height");
+      sourceWidth = capsStruct.getInteger("width");
+      sourceHeight = capsStruct.getInteger("height");
       Fraction fps = capsStruct.getFraction("framerate");
-      nativeFrameRate = (float)fps.numerator / fps.denominator;
+      sourceFrameRate = (float)fps.numerator / fps.denominator;
 
       // Set the playback rate to the file's native framerate
       // unless the user has already set a custom one
       if (frameRate == -1.0) {
-        frameRate = nativeFrameRate;
+        frameRate = sourceFrameRate;
       }
 
       sample.dispose();
       return FlowReturn.OK;
     }
-  }
-  
+  } 
 }
