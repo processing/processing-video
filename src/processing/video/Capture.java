@@ -423,15 +423,20 @@ public class Capture extends PImage implements PConstants {
 
   
   protected void initCustomPipeline(String pstr) {
-    String[] parts = pstr.split("!");
-    int n = parts.length;
+//    String[] parts = pstr.split("!");
+//    int n = parts.length;
     
+
+    int n = 1;
     Element[] elements = new Element[n + 4];
+
+    Element el = Gst.parseLaunch(pstr);
+    elements[0] = el;
     
-    for (int i = 0; i < n; i++) {
-      String el = parts[i].trim();
-      elements[i] = ElementFactory.make(el, null);
-    }
+//    for (int i = 0; i < n; i++) {
+//      String el = parts[i].trim();
+//      elements[i] = ElementFactory.make(el, null);
+//    }
     
     pipeline = new Pipeline();
 
