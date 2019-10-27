@@ -381,6 +381,15 @@ public class Capture extends PImage implements PConstants {
 
     Video.init();
 
+    if(device == null) {
+      String[] devices = list();
+      if(devices != null && devices.length > 0) {
+        device = devices[0];
+      } else {
+        throw new IllegalStateException("Could not find any devices");
+      }
+    }
+
     device = device.trim();
     
     int p = device.indexOf("pipeline:");
