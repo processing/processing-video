@@ -32,10 +32,10 @@ import java.util.Map;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
- 
+
 /**
  * This class loads the gstreamer native libraries.
- * 
+ *
  */
 public class LibraryLoader {
 
@@ -43,9 +43,9 @@ public class LibraryLoader {
   }
 
   private static LibraryLoader instance;
-   
+
   static final Object[][] WINDOWS_DEPENDENCIES = {
-      // Core gstreamer libraries  
+      // Core gstreamer libraries
       { "libgstadaptivedemux-1.0-0", new String[] {}, false },
       { "libgstallocators-1.0-0", new String[] {}, false },
       { "libgstapp-1.0-0", new String[] {}, false },
@@ -156,7 +156,7 @@ public class LibraryLoader {
       { "avutil-56", new String[] {}, false },
       { "swresample-3", new String[] {}, false }
     };
-  
+
   static final Object[][] MACOSX_DEPENDENCIES = {
       { "gstbase-1.0", new String[] { "gstreamer-1.0" }, true },
       { "gstinterfaces-1.0", new String[] { "gstreamer-1.0" }, true },
@@ -172,31 +172,31 @@ public class LibraryLoader {
       { "gstaudio-1.0", new String[] { "gstbase-1.0" }, true },
       { "gstvideo-1.0", new String[] { "gstbase-1.0" }, true }, };
 
-  
-  static final Object[][] dependencies = 
-    Platform.isWindows() ? WINDOWS_DEPENDENCIES : 
+
+  static final Object[][] dependencies =
+    Platform.isWindows() ? WINDOWS_DEPENDENCIES :
       Platform.isMac() ? MACOSX_DEPENDENCIES : DEFAULT_DEPENDENCIES;
 
-  
-  private static final Map<String, Object> loadedMap = 
-    new HashMap<String, Object>();
 
-  
+  private static final Map<String, Object> loadedMap =
+    new HashMap<>();
+
+
   private static final int RECURSIVE_LOAD_MAX_DEPTH = 5;
-  
-  
+
+
   private LibraryLoader() {
   }
 
-  
+
   private void preLoadLibs() {
     for (Object[] a : dependencies) {
       load(a[0].toString(), DummyLibrary.class, true, 0, (Boolean) a[2]);
     }
   }
 
-  
-  private String[] findDeps(String name) {
+
+  static private String[] findDeps(String name) {
 
     for (Object[] a : dependencies) {
       if (name.equals(a[0])) {
@@ -205,16 +205,16 @@ public class LibraryLoader {
       }
     }
 
-    return new String[] {}; // library dependency load chain unspecified -
-                            // probably client call
+    // library dependency load chain unspecified - probably client call
+    return new String[] { };
   }
 
-  
+
   public Object load(String name, Class<?> clazz, boolean reqLib) {
     return load(name, clazz, true, 0, reqLib);
   }
 
-  
+
   private Object load(String name, Class<?> clazz, boolean forceReload,
       int depth, boolean reqLib) {
 
@@ -252,8 +252,8 @@ public class LibraryLoader {
     return library;
   }
 
-  
-  private static Object loadLibrary(String name, Class<?> clazz, 
+
+  private static Object loadLibrary(String name, Class<?> clazz,
     boolean reqLib) {
 
     // Logger.getAnonymousLogger().info(String.format("loading %s", name));
@@ -279,19 +279,19 @@ public class LibraryLoader {
     if (reqLib)
       throw new UnsatisfiedLinkError(
         String.format(
-          "can't load library %s (%1$s|lib%1$s|lib%1$s-0) with " + 
+          "can't load library %s (%1$s|lib%1$s|lib%1$s-0) with " +
           "-Djna.library.path=%s. Last error:%s",
           name, System.getProperty("jna.library.path"), linkError));
     else {
       System.out.println(String.format(
-        "can't load library %s (%1$s|lib%1$s|lib%1$s-0) with " + 
+        "can't load library %s (%1$s|lib%1$s|lib%1$s-0) with " +
         "-Djna.library.path=%s. Last error:%s",
         name, System.getProperty("jna.library.path"), linkError));
       return null;
     }
   }
 
-  
+
   public static synchronized LibraryLoader getInstance() {
     if (null == instance) {
       instance = new LibraryLoader();
