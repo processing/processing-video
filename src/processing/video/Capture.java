@@ -432,44 +432,30 @@ public class Capture extends PImage implements PConstants {
 
   
   protected void initCustomPipeline(String pstr) {
-//    String[] parts = pstr.split("!");
-//    int n = parts.length;
-    
+    String PIPELINE_END
+    = " ! videorate ! videoscale ! videoconvert ! appsink name=sink";
 
-    int n = 1;
-    Element[] elements = new Element[n + 4];
+    pipeline = (Pipeline) Gst.parseLaunch(pstr + PIPELINE_END);
 
-    Element el = Gst.parseLaunch(pstr);
-    elements[0] = el;
-    
-//    for (int i = 0; i < n; i++) {
-//      String el = parts[i].trim();
-//      elements[i] = ElementFactory.make(el, null);
-//    }
-    
-    pipeline = new Pipeline();
-
-    Element videoscale = ElementFactory.make("videoscale", null);
-    Element videoconvert = ElementFactory.make("videoconvert", null);
-    Element capsfilter = ElementFactory.make("capsfilter", null);
-
-    String frameRateString;
+    String caps = ", width=" + width + ", height=" + height;
     if (frameRate != 0.0) {
-      frameRateString = ", framerate=" + fpsToFramerate(frameRate);
-    } else {
-      frameRateString = "";
+    caps += ", framerate=" + fpsToFramerate(frameRate);
     }
-    capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
-    
-    initSink();
-    
-    elements[n + 0] = videoscale;
-    elements[n + 1] = videoconvert;
-    elements[n + 2] = capsfilter;
-    elements[n + 3] = rgbSink;
-    
-    pipeline.addMany(elements);
-    Pipeline.linkMany(elements);
+
+    rgbSink = (AppSink) pipeline.getElementByName("sink");
+    rgbSink.set("emit-signals", true);
+    newSampleListener = new NewSampleListener();
+    newPrerollListener = new NewPrerollListener();        
+    rgbSink.connect(newSampleListener);
+    rgbSink.connect(newPrerollListener);
+
+    useBufferSink = Video.useGLBufferSink && parent.g.isGL();
+    if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+    if (useBufferSink) rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBx" + caps));
+    else rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx" + caps));
+    } else {
+    rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB" + caps));
+    }
 
     makeBusConnections(pipeline.getBus());
   }
