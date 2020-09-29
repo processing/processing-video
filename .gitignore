@@ -1,6 +1,10 @@
+.DS_Store
+*~
+
 bin
 /dist
-/**/.DS_Store
 /library/macosx*
 /library/windows*
 /library/linux*
+
+local.properties
