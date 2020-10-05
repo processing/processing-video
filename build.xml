@@ -1,13 +1,40 @@
 <?xml version="1.0"?>
 <project name="Processing Video Library" default="build">
-  
-  <property file="./build.properties" />
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+  <property file="local.properties" />
+
+  <condition property="props.present">
+    <available file="local.properties" />
+  </condition>
+
+  <fail unless="processing.dir"
+        message="To make the build work, create a file named local.properties, with a line that reads:
+${line.separator}processing.dir=/path/to/processing-git
+${line.separator}with the path to where you have the code for Processing 3 checked out. ${line.separator}(This script will look for the 'core' directory inside that folder.)" />
+
+  <subant buildpath="${processing.dir}/core" />
+
+  <property name="core.dir" value="${processing.dir}/core/library" />
+
+  <condition property="processing.built">
+    <available file="${core.dir}/core.jar" />
+  </condition>
+
+  <fail unless="processing.built"
+        message="Please first build Processing so that we have a usable core.jar to bundle with the app." />
+
+  <property name="core.classpath.location" value="${processing.dir}/core/library/" />
+  <property name="compiler.classpath.location" value="${processing.dir}/java/mode/" />
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 
   <target name="clean" description="Clean the build directories">
     <delete dir="bin" />
     <delete file="library/video.jar" />
   </target>
-  
+
   <target name="compile" description="Compile sources">
     <condition property="core-built">
       <available file="${core.classpath.location}/core.jar" />
@@ -16,72 +43,77 @@
 
     <mkdir dir="bin" />
     <javac source="1.8"
-	   target="1.8"
-	   srcdir="src" destdir="bin" 
-	   encoding="UTF-8"
-	   includeAntRuntime="false"
-	   classpath="${core.classpath.location}/core.jar; library/gst1-java-core-1.1.0.jar; library/jna.jar"
-	   nowarn="true">
-      <compilerclasspath path="${compiler.classpath.location}/org.eclipse.jdt.core.jar; 
+           target="1.8"
+           srcdir="src" destdir="bin"
+           encoding="UTF-8"
+           includeAntRuntime="false"
+           classpath="${core.classpath.location}/core.jar;
+                      library/gst1-java-core-1.2.0.jar;
+                      library/jna.jar"
+           nowarn="true">
+      <compilerclasspath path="${compiler.classpath.location}/org.eclipse.jdt.core.jar;
                                ${compiler.classpath.location}/jdtCompilerAdapter.jar" />
     </javac>
   </target>
-  
+
   <target name="build" depends="compile" description="Build video library">
     <jar basedir="bin" destfile="library/video.jar" />
     <delete dir="bin" />
   </target>
-  
+
   <target name="dist" depends="build" description="Creates distribution package">
     <mkdir dir="dist/tmp/video" />
-    
-   	<!-- copy library files (jar and gstreamer natives) -->
-  	<copy todir="dist/tmp/video/library">
-  		<fileset dir="library" />
-	  </copy>
-    
-  	<!-- copy examples -->
-  	<copy todir="dist/tmp/video/examples">
-  		<fileset dir="examples" />
-	  </copy>
 
-  	<!-- copy source -->
+    <!-- copy library files (jar and gstreamer natives) -->
+    <copy todir="dist/tmp/video/library">
+      <fileset dir="library" />
+    </copy>
+
+    <!-- copy examples -->
+    <copy todir="dist/tmp/video/examples">
+      <fileset dir="examples" />
+    </copy>
+
+    <!-- copy source -->
     <copy todir="dist/tmp/video/src">
-  		<fileset dir="src" />
-	  </copy>	
-  	
+      <fileset dir="src" />
+    </copy>
+
     <!-- copy properties -->
-    <copy file="library.properties" tofile="dist/tmp/video/library.properties" /> 
-    
+    <copy file="library.properties" tofile="dist/tmp/video/library.properties" />
+
     <!-- create the java reference of the library -->
-    <mkdir dir="dist/tmp/video/reference" />	
-	  <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-19" 
-			classpath="${core.classpath.location}/core.jar;library/gst1-java-core-1.1.0.jar;library/jna.jar;bin"
-			destdir="dist/tmp/video/reference"
-			verbose="false" 
-			stylesheetfile="resources/stylesheet.css" 
-			doctitle="Javadocs: Video" 
-			public="true" version="false" 
-			windowtitle="Javadocs: Video"> 			
- 		<link href="http://java.sun.com/javase/6/docs/api/" />
-		<link href="http://processing.googlecode.com/svn/trunk/processing/build/javadoc/core/" />
-		<taglet name="ExampleTaglet" path="resources/code" />
- 		<fileset dir="dist/tmp/video/src" defaultexcludes="yes">
-		<!-- add packages to be added to reference. -->
-			<include name="**/*"/>
-		</fileset>
-	  </javadoc>    
-        
+    <mkdir dir="dist/tmp/video/reference" />
+    <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-20"
+             classpath="${core.classpath.location}/core.jar;
+                        library/gst1-java-core-1.2.0.jar;
+                        library/jna.jar;
+                        bin"
+             destdir="dist/tmp/video/reference"
+             verbose="false"
+             stylesheetfile="resources/stylesheet.css"
+             public="true" version="false"
+             doctitle="Javadocs: Video"
+             windowtitle="Javadocs: Video">
+
+      <!-- TODO these are reeeaally out of date [fry 200929] -->
+      <link href="http://java.sun.com/javase/6/docs/api/" />
+      <link href="http://processing.googlecode.com/svn/trunk/processing/build/javadoc/core/" />
+
+      <taglet name="ExampleTaglet" path="resources/code" />
+      <fileset dir="dist/tmp/video/src" defaultexcludes="yes">
+        <!-- add packages to be added to reference. -->
+        <include name="**/*"/>
+      </fileset>
+    </javadoc>
+
     <!-- create zip package -->
     <delete file="dist/video.zip"/>
-	  <zip destfile="dist/video.zip"
-  		basedir="dist/tmp"
-  		excludes="**/.DS_Store"
-	  />	
-	
-	  <!-- copy properties to use by download manager -->
-    <copy file="library.properties" tofile="dist/video.txt" />	
-	
-	  <delete dir="dist/tmp" />
+    <zip destfile="dist/video.zip" basedir="dist/tmp" excludes="**/.DS_Store" />
+
+    <!-- copy properties to use by download manager -->
+    <copy file="library.properties" tofile="dist/video.txt" />
+
+    <delete dir="dist/tmp" />
   </target>
 </project>

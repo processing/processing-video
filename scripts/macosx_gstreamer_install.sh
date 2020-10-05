@@ -4,8 +4,8 @@
 # only those needed by Processing:
 # https://gstreamer.freedesktop.org/documentation/deploying/mac-osx.html?gi-language=c#deploy-only-necessary-packages-using-the-provided-ones
 
-GST_VERSION=${1:-1.16.0}
-INSTALL_PACKAGES=0 # version 1.16.0 does not yet have a pacakages image
+GST_VERSION=${1:-1.18.0}
+INSTALL_PACKAGES=0 # version 1.16.0 does not yet have a package image
 GST_PKG_URL="https://gstreamer.freedesktop.org/data/pkg/osx"
 DOWNLOAD_PATH="."
 TARGET_PATH="/"
