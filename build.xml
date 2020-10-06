@@ -116,4 +116,40 @@ ${line.separator}with the path to where you have the code for Processing 3 check
 
     <delete dir="dist/tmp" />
   </target>
+
+
+ <target name="macosx-dist-notarize" if="env.VIDEO_LIB_PASSWORD">
+    <!-- xcrun: error: unable to find utility "altool", not a developer tool or in PATH -->
+    <!-- fix with 'sudo xcode-select -r' -->
+
+    <!-- when it's time to sign/update documents or make an app password: -->
+    <!-- https://appleid.apple.com/account/manage -->
+
+    <exec executable="/usr/bin/xcrun" dir="dist" failonerror="true">
+      <arg value="altool" />
+      <arg value="--notarize-app" />
+
+      <!-- spew a bunch of useless garbage that has nothing to do with success/failure -->
+      <!-- <arg value="- -verbose" /> -->
+
+      <arg value="--primary-bundle-id" />
+      <arg value="processing.video" />
+
+      <arg value="--username" />
+      <arg value="${env.VIDEO_APPLE_ID}" />
+
+      <arg value="--password" />
+      <arg value="${env.VIDEO_LIB_PASSWORD}" />
+
+      <arg value="--file" />
+      <arg value="video.zip" />
+    </exec>
+
+    <echo>
+      Check on notarization status with:
+
+      xcrun altool -u $VIDEO_APPLE_ID -p $VIDEO_LIB_PASSWORD --notarization-info [the RequestUUID above]
+    </echo>
+  </target>
+
 </project>

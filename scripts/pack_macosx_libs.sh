@@ -9,7 +9,7 @@
 # Original version by Gottfried Haider. 
 # https://github.com/gohai/processing-glvideo/blob/master/src/native/Makefile
 
-gst_minor_ver=${1:-18} 
+gst_minor_ver=${1:-16}
 
 if [ ${gst_minor_ver} -gt 14 ]
 then
