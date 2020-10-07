@@ -3,6 +3,8 @@
 
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 
+  <property environment="env"/>
+
   <property file="local.properties" />
 
   <condition property="props.present">
@@ -61,8 +63,100 @@ ${line.separator}with the path to where you have the code for Processing 3 check
     <delete dir="bin" />
   </target>
 
+  <target name="macosx-dist-sign" if="env.VIDEO_APPLE_ID">
+    <echo>
+      Code signing will only work if you have a $99/yr Apple developer ID.
+
+      With a proper ID, if code signing fails, you may need to use:
+      export CODESIGN_ALLOCATE="/Applications/Xcode.app/Contents/Developer/usr/bin/codesign_allocate"
+    </echo>
+
+    <!-- Need to create a Developer ID Application certificate />-->
+    <!-- https://developer.apple.com/account/resources/certificates/list -->
+
+    <apply executable="/usr/bin/codesign" dir="library" failonerror="true">
+      <arg value="--sign" />
+      <arg value="Developer ID Application" />
+
+      <!-- remove all other signatures -->
+      <arg value="--force" />
+
+      <arg value="--entitlements" />
+      <arg value="../ffs.entitlements" />
+
+      <!-- recursively sign everything -->
+      <arg value="--deep" />
+
+      <!-- enable the "hardened runtime" -->
+      <arg value="--options" />
+      <arg value="runtime" />
+
+      <fileset dir="library/macosx">
+        <patternset>
+          <include name="**/*.dylib" />
+        </patternset>
+      </fileset>
+    </apply>
+
+    <!-- Verify that the signature will pass Gatekeeper checks
+         https://developer.apple.com/library/mac/technotes/tn2206 -->
+    <!--
+    <exec executable="/usr/bin/codesign" dir="macosx/work">
+      <arg value="- -verify" />
+      <arg value="- -deep" />
+      <arg value="- -verbose=2" />
+      <arg value="Processing.app" />
+    </exec>
+    -->
+    <!-- Disabling since it's a lot of gunk but not that useful. -->
+
+    <echo>
+      Signed Gstreamer libraries
+    </echo>    
+  </target>
+
+  <target name="macosx-dist-notarize" if="env.VIDEO_APPLE_ID">
+    <!-- xcrun: error: unable to find utility "altool", not a developer tool or in PATH -->
+    <!-- fix with 'sudo xcode-select -r' -->
+
+    <!-- when it's time to sign/update documents or make an app password: -->
+    <!-- https://appleid.apple.com/account/manage -->
+
+    <exec executable="/usr/bin/xcrun" dir="dist" failonerror="true">
+      <arg value="altool" />
+      <arg value="--notarize-app" />
+
+      <!-- spew a bunch of useless garbage that has nothing to do with success/failure -->
+      <!-- <arg value="- -verbose" /> -->
+
+      <arg value="--primary-bundle-id" />
+      <arg value="processing.video" />
+
+      <arg value="--username" />
+      <arg value="${env.VIDEO_APPLE_ID}" />
+
+      <arg value="--password" />
+      <arg value="${env.VIDEO_LIB_PASSWORD}" />
+
+      <arg value="--asc-provider" />
+      <arg value="${env.PROVIDER_SHORT_NAME}" />
+
+      <arg value="--file" />
+      <arg value="video.zip" />
+
+    </exec>
+
+    <echo>
+      Check on notarization status with:
+
+      xcrun altool -u $VIDEO_APPLE_ID -p $VIDEO_LIB_PASSWORD --notarization-info [the RequestUUID above]
+    </echo>
+  </target>
+
   <target name="dist" depends="build" description="Creates distribution package">
     <mkdir dir="dist/tmp/video" />
+
+    <antcall target="macosx-dist-sign" />
 
     <!-- copy library files (jar and gstreamer natives) -->
     <copy todir="dist/tmp/video/library">
@@ -115,41 +209,16 @@ ${line.separator}with the path to where you have the code for Processing 3 check
     <copy file="library.properties" tofile="dist/video.txt" />
 
     <delete dir="dist/tmp" />
-  </target>
 
-
- <target name="macosx-dist-notarize" if="env.VIDEO_LIB_PASSWORD">
-    <!-- xcrun: error: unable to find utility "altool", not a developer tool or in PATH -->
-    <!-- fix with 'sudo xcode-select -r' -->
-
-    <!-- when it's time to sign/update documents or make an app password: -->
-    <!-- https://appleid.apple.com/account/manage -->
-
-    <exec executable="/usr/bin/xcrun" dir="dist" failonerror="true">
-      <arg value="altool" />
-      <arg value="--notarize-app" />
-
-      <!-- spew a bunch of useless garbage that has nothing to do with success/failure -->
-      <!-- <arg value="- -verbose" /> -->
-
-      <arg value="--primary-bundle-id" />
-      <arg value="processing.video" />
-
-      <arg value="--username" />
-      <arg value="${env.VIDEO_APPLE_ID}" />
-
-      <arg value="--password" />
-      <arg value="${env.VIDEO_LIB_PASSWORD}" />
-
-      <arg value="--file" />
-      <arg value="video.zip" />
-    </exec>
+    <antcall target="macosx-dist-notarize" />
 
     <echo>
-      Check on notarization status with:
+      =======================================================
+      Processing Video Library was built. Grab it from
 
-      xcrun altool -u $VIDEO_APPLE_ID -p $VIDEO_LIB_PASSWORD --notarization-info [the RequestUUID above]
-    </echo>
+      dist/video.zip
+      =======================================================
+    </echo>    
   </target>
 
 </project>
