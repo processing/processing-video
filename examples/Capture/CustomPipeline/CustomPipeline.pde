@@ -14,7 +14,7 @@ void setup() {
   size(640, 480);
   
   // Start the pipeline description with the "pipeline:" prefix, 
-  // the rest could any regular GStreamer pipeline as passed to gst-launch:
+  // the rest could be any regular GStreamer pipeline as passed to gst-launch:
   // https://gstreamer.freedesktop.org/documentation/tools/gst-launch.html?gi-language=c#pipeline-description 
   cam = new Capture(this, 640, 480, "pipeline:videotestsrc");
   cam.start();  
