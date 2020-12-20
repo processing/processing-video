@@ -8,6 +8,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="library/jna.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/processing-core"/>
-	<classpathentry kind="lib" path="library/gst1-java-core-1.1.0.jar"/>
+	<classpathentry kind="lib" path="library/gst1-java-core-1.2.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
