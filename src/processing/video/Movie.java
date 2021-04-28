@@ -48,7 +48,8 @@ import org.freedesktop.gstreamer.event.SeekType;
  * Datatype for storing and playing movies. Movies must be located in the sketch's data folder 
  * or an accessible place on the network to load without an error.
  *
- * @webref video
+ * @webref movie
+ * @webBrief Datatype for storing and playing movies.
  * @usage application
  */
 public class Movie extends PImage implements PConstants {
@@ -157,6 +158,7 @@ public class Movie extends PImage implements PConstants {
    * parameter to 4, for example, will cause 4 frames to be read per second.
    *
    * @webref movie
+   * @webBrief Sets how often frames are read from the movie.
    * @usage web_application
    * @param ifps speed of the movie in frames per second
    * @brief Sets the target frame rate
@@ -190,6 +192,7 @@ public class Movie extends PImage implements PConstants {
    * speed in reverse.
    *
    * @webref movie
+   * @webBrief Sets the relative playback speed of the movie.
    * @usage web_application
    * @param irate speed multiplier for movie playback
    * @brief Sets the relative playback speed
@@ -210,6 +213,7 @@ public class Movie extends PImage implements PConstants {
    * 20 seconds long the value returned will be 80.0.
    *
    * @webref movie
+   * @webBrief Returns the length of the movie in seconds.
    * @usage web_application
    * @brief Returns length of movie in seconds
    */
@@ -224,6 +228,7 @@ public class Movie extends PImage implements PConstants {
    * the movie has been playing for 4 seconds, the number 4.0 will be returned.
    *
    * @webref movie
+   * @webBrief Returns the location of the playback head in seconds.
    * @usage web_application
    * @brief Returns location of playback head in units of seconds
    */
@@ -239,6 +244,7 @@ public class Movie extends PImage implements PConstants {
    * calling <b>jump(6.1)</b> would go to the middle of the movie.
    *
    * @webref movie
+   * @webBrief Jumps to a specific location within a movie.
    * @usage web_application
    * @param where position to jump to specified in seconds
    * @brief Jumps to a specific location
@@ -262,6 +268,7 @@ public class Movie extends PImage implements PConstants {
    * Returns "true" when a new movie frame is available to read.
    *
    * @webref movie
+   * @webBrief Returns "true" when a new movie frame is available to read.
    * @usage web_application
    * @brief Returns "true" when a new movie frame is available to read.
    */
@@ -274,6 +281,7 @@ public class Movie extends PImage implements PConstants {
    * Plays a movie one time and stops at the last frame.
    *
    * @webref movie
+   * @webBrief Plays a movie one time and stops at the last frame.
    * @usage web_application
    * @brief Plays movie one time and stops at the last frame
    */
@@ -292,6 +300,7 @@ public class Movie extends PImage implements PConstants {
    * Plays a movie continuously, restarting it when it's over.
    *
    * @webref movie
+   * @webBrief Plays a movie continuously, restarting it when it's over.
    * @usage web_application
    * @brief Plays a movie continuously, restarting it when it's over.
    */
@@ -306,6 +315,8 @@ public class Movie extends PImage implements PConstants {
    * end and then stop on the last frame.
    *
    * @webref movie
+   * @webBrief If a movie is looping, this will cause it to play until the
+   * end and then stop on the last frame.
    * @usage web_application
    * @brief Stops the movie from looping
    */
@@ -321,6 +332,7 @@ public class Movie extends PImage implements PConstants {
    * it will continue from where it was paused.
    *
    * @webref movie
+   * @webBrief Pauses a movie during playback.
    * @usage web_application
    * @brief Pauses the movie
    */
@@ -340,6 +352,7 @@ public class Movie extends PImage implements PConstants {
    * when a movie is played, it will begin from the beginning.
    *
    * @webref movie
+   * @webBrief Stops a movie from continuing.
    * @usage web_application
    * @brief Stops the movie
    */
@@ -358,6 +371,7 @@ public class Movie extends PImage implements PConstants {
    * Reads the current frame of the movie.
    *
    * @webref movie
+   * @webBrief Reads the current frame of the movie.
    * @usage web_application
    * @brief Reads the current frame
    */

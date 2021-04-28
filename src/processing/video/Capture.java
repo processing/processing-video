@@ -46,9 +46,15 @@ import org.freedesktop.gstreamer.event.SeekType;
 
 
 /**
- * Datatype for storing and manipulating video frames from an attached capture device such as a camera.
+ * Datatype for storing and manipulating video frames from an attached 
+ * capture device such as a camera. Use <b>Capture.list()</b> to show 
+ * the names of any attached devices. Using the version of the constructor 
+ * without <b>name</b> will attempt to use the last device used by a 
+ * QuickTime program.
  *
- * @webref video
+ * @webref capture
+ * @webBrief Datatype for storing and manipulating video frames from an 
+ * attached capture device such as a camera.
  * @usage application
  */
 public class Capture extends PImage implements PConstants {
@@ -104,7 +110,6 @@ public class Capture extends PImage implements PConstants {
 
   /**
    *  Open a specific capture device
-   *  @param parent PApplet, typically "this"
    *  @param device device name
    *  @see Capture#list()
    *  @see Capture#listRawNames()
@@ -117,7 +122,6 @@ public class Capture extends PImage implements PConstants {
 
   /**
    *  Open the default capture device with a given resolution
-   *  @param parent PApplet, typically "this"
    *  @param width width in pixels
    *  @param height height in pixels
    */
@@ -128,9 +132,6 @@ public class Capture extends PImage implements PConstants {
 
   /**
    *  Open the default capture device with a given resolution and framerate
-   *  @param parent PApplet, typically "this"
-   *  @param width width in pixels
-   *  @param height height in pixels
    *  @param fps frames per second
    */
   public Capture(PApplet parent, int width, int height, float fps) {
@@ -140,10 +141,6 @@ public class Capture extends PImage implements PConstants {
 
   /**
    *  Open a specific capture device with a given resolution
-   *  @param parent PApplet, typically "this"
-   *  @param width width in pixels
-   *  @param height height in pixels
-   *  @param device device name
    *  @see Capture#list()
    */
   public Capture(PApplet parent, int width, int height, String device) {
@@ -153,11 +150,6 @@ public class Capture extends PImage implements PConstants {
 
   /**
    *  Open a specific capture device with a given resolution and framerate
-   *  @param parent PApplet, typically "this"
-   *  @param width width in pixels
-   *  @param height height in pixels
-   *  @param device device name (null opens the default device)
-   *  @param fps frames per second (0 uses the default framerate)
    *  @see Capture#list()
    */
   public Capture(PApplet parent, int width, int height, String device, float fps) {
@@ -217,6 +209,7 @@ public class Capture extends PImage implements PConstants {
    * parameter to 4, for example, will cause 4 frames to be read per second.
    *
    * @webref capture
+   * @webBrief Sets how often frames are read from the capture device.
    * @usage web_application
    * @param ifps speed of the capture device in frames per second
    * @brief Sets the target frame rate
@@ -244,6 +237,7 @@ public class Capture extends PImage implements PConstants {
    * Returns "true" when a new frame from the device is available to read.
    *
    * @webref capture
+   * @webBrief Returns "true" when a new frame from the device is available to read.
    * @usage web_application
    * @brief Returns "true" when a new frame is available to read.
    */
@@ -255,7 +249,8 @@ public class Capture extends PImage implements PConstants {
   /**
    * Starts capturing frames from the selected device.
    *
-   * @webref capture.
+   * @webref capture
+   * @webBrief Starts capturing frames from an attached device.
    * @usage web_application
    * @brief Starts video capture
    */
@@ -273,6 +268,7 @@ public class Capture extends PImage implements PConstants {
    * Stops capturing frames from an attached device.
    *
    * @webref capture
+   * @webBrief Stops capturing frames from an attached device.
    * @usage web_application
    * @brief Stops video capture
    */
@@ -290,6 +286,7 @@ public class Capture extends PImage implements PConstants {
    * Reads the current frame of the device.
    *
    * @webref capture
+   * @webBrief Reads the current frame of the device.
    * @usage web_application
    * @brief Reads the current frame
    */
