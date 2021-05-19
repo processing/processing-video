@@ -449,6 +449,23 @@ public class Movie extends PImage implements PConstants {
   }
 
 
+  /**
+   * @param w width of pixel rectangle to get
+   * @param h height of pixel rectangle to get
+   */
+  public PImage get(int x, int y, int w, int h) {
+    if (outdatedPixels) loadPixels();
+    return super.get(x, y, w, h);
+  }
+
+
+  @Override
+  public PImage copy() {
+    if (outdatedPixels) loadPixels();
+    return super.copy();
+  }
+
+
   @Override
   protected void getImpl(int sourceX, int sourceY,
                          int sourceWidth, int sourceHeight,
