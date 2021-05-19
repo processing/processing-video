@@ -104,7 +104,7 @@ public class Movie extends PImage implements PConstants {
    * @param filename String
    */
   public Movie(PApplet parent, String filename) {
-    super(0, 0, RGB);
+    super(0, 0, ARGB);
     initGStreamer(parent, filename);
   }
 
@@ -377,7 +377,7 @@ public class Movie extends PImage implements PConstants {
    */
   public synchronized void read() {
     if (firstFrame) {
-      super.init(sourceWidth, sourceHeight, RGB, 1);
+      super.init(sourceWidth, sourceHeight, ARGB, 1);
       firstFrame = false;
     }
 
@@ -613,10 +613,13 @@ public class Movie extends PImage implements PConstants {
 
     useBufferSink = Video.useGLBufferSink && parent.g.isGL();
     if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-      if (useBufferSink) rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBx"));
-      else rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRx"));
+      if (useBufferSink) {
+        rgbSink.setCaps(Caps.fromString("video/x-raw, format=RGBA"));
+      } else {
+        rgbSink.setCaps(Caps.fromString("video/x-raw, format=BGRA"));
+      }
     } else {
-      rgbSink.setCaps(Caps.fromString("video/x-raw, format=xRGB"));
+      rgbSink.setCaps(Caps.fromString("video/x-raw, format=ARGB"));
     }
   }
   
