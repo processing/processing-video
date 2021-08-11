@@ -148,7 +148,7 @@ public class Movie extends PImage implements PConstants {
     try {
       dispose();
     } finally {
-      super.finalize();
+//      super.finalize();
     }
   }
 
