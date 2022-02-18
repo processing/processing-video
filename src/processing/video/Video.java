@@ -179,20 +179,16 @@ public class Video implements PConstants {
     } 
       
     if (libPath == null && !usingGStreamerSystemInstall) {
-      // Paths are build automatically from the current location of the video
-      // library.
-      if (PApplet.platform == LINUX) {    
-        buildLinuxPaths();
-      } else if (PApplet.platform == WINDOWS) {
-        buildWindowsPaths();
-      } else if (PApplet.platform == MACOSX) {
-        buildMacOSXPaths();
-      }      
+      buildPaths();
     }
-    
-    if (!gstreamerLibPath.equals("")) {
-      System.setProperty("jna.library.path", gstreamerLibPath);
-    }
+
+    // TODO This is a terrible idea, because it's going to wipe out
+    //      other native libraries currently in use.
+    //      jna.library.path will be set by the PDE or outside the PDE,
+    //      needs to be set by the developer. [fry 220217]
+    //if (!gstreamerLibPath.equals("")) {
+    //  System.setProperty("jna.library.path", gstreamerLibPath);
+    //}
     
     Environment.libc.setenv("GST_DEBUG", String.valueOf(DEBUG_LEVEL), 1);    
 
@@ -259,43 +255,42 @@ public class Video implements PConstants {
       reg.removePlugin(plg);
     }    
   }
-  
-  
-  static protected void buildLinuxPaths() {
-    // JNA automatically tries all library paths known to the host system's
-    // ldconfig, so we'd even catch locations like /usr/local/lib etc
-    gstreamerLibPath = "";
-    gstreamerPluginPath = "";
-  }
 
-  
-  static protected void buildWindowsPaths() {
-    LibraryPath libPath = new LibraryPath();
-    String path = libPath.get();
-    gstreamerLibPath = buildGStreamerLibPath(path, "windows" + bitsJVM);
-    if (!gstreamerLibPath.equals("")) {
-      gstreamerPluginPath = Paths.get(gstreamerLibPath, "gstreamer-1.0").toString();
+
+  /**
+   * Search for an item by walking through java.library.path.
+   */
+  @SuppressWarnings("SameParameterValue")
+  static private String findNative(String what) {
+    String libraryPath = System.getProperty("java.library.path");
+    // Should not be null, but cannot assume
+    if (libraryPath != null) {
+      String[] folders = PApplet.split(libraryPath, ';');
+      // Usually, the most relevant paths will be at the front of the list,
+      // so hopefully this will not walk several entries.
+      for (String folder : folders) {
+        File file = new File(folder, what);
+        if (file.exists()) {
+          return file.getAbsolutePath();
+        }
+      }
     }
+    return null;
   }
 
-  
-  static protected void buildMacOSXPaths() {
-    LibraryPath libPath = new LibraryPath();
-    String path = libPath.get();
-    gstreamerLibPath = buildGStreamerLibPath(path, "macosx");
-    if (!gstreamerLibPath.equals("")) {
-      gstreamerPluginPath = Paths.get(gstreamerLibPath, "gstreamer-1.0").toString();
-    }    
-  }
 
-  
-  static protected String buildGStreamerLibPath(String base, String os) {        
-    File path = new File(base + os);
-    if (path.exists()) {
-      return base + os; 
-    } else {     	
-    	usingGStreamerSystemInstall = true;  
-    	return "";  
+  static protected void buildPaths() {
+    // look for the gstreamer-1.0 folder in the native library path
+    // (there are natives adjacent to it, so this will work)
+    gstreamerPluginPath = findNative("gstreamer-1.0");
+    if (gstreamerPluginPath == null) {
+      System.err.println("Could not find gstreamer-1.0 folder on java.library.path");
+      gstreamerPluginPath = "";
+      gstreamerLibPath = "";
+      usingGStreamerSystemInstall = true;
+    } else {
+      File gstreamerLibDir = new File(gstreamerPluginPath).getParentFile();
+      gstreamerLibPath = gstreamerLibDir.getAbsolutePath();
     }
   }
 
