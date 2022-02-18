@@ -28,6 +28,7 @@ package processing.video;
 import org.freedesktop.gstreamer.*;
 import processing.core.PApplet;
 import processing.core.PConstants;
+import processing.data.StringList;
 
 import java.io.File;
 import java.nio.ByteOrder;
@@ -182,13 +183,13 @@ public class Video implements PConstants {
       buildPaths();
     }
 
-    // TODO This is a terrible idea, because it's going to wipe out
-    //      other native libraries currently in use.
-    //      jna.library.path will be set by the PDE or outside the PDE,
-    //      needs to be set by the developer. [fry 220217]
-    //if (!gstreamerLibPath.equals("")) {
-    //  System.setProperty("jna.library.path", gstreamerLibPath);
-    //}
+    if (!gstreamerLibPath.equals("")) {
+      // Should be safe because this is setting the jna.library.path,
+      // not java.library.path, and JNA is being provided by the video library.
+      // This will need to change if JNA is ever moved into more of a shared
+      // location (i.e. part of core) because this would overwrite the prop.
+      System.setProperty("jna.library.path", gstreamerLibPath);
+    }
     
     Environment.libc.setenv("GST_DEBUG", String.valueOf(DEBUG_LEVEL), 1);    
 
@@ -258,14 +259,15 @@ public class Video implements PConstants {
 
 
   /**
-   * Search for an item by walking through java.library.path.
+   * Search for an item by checking folders listed in java.library.path
+   * for a specific name.
    */
   @SuppressWarnings("SameParameterValue")
-  static private String findNative(String what) {
+  static private String searchLibraryPath(String what) {
     String libraryPath = System.getProperty("java.library.path");
     // Should not be null, but cannot assume
     if (libraryPath != null) {
-      String[] folders = PApplet.split(libraryPath, ';');
+      String[] folders = PApplet.split(libraryPath, File.pathSeparatorChar);
       // Usually, the most relevant paths will be at the front of the list,
       // so hopefully this will not walk several entries.
       for (String folder : folders) {
@@ -279,10 +281,43 @@ public class Video implements PConstants {
   }
 
 
+  /**
+   * Search for an item by checking folders listed in java.class.path
+   * for a specific name.
+   */
+  @SuppressWarnings("SameParameterValue")
+  static private String searchClassPath(String what) {
+    String classPath = System.getProperty("java.class.path");
+    // Should not be null, but cannot assume
+    if (classPath != null) {
+      String[] entries = PApplet.split(classPath, File.pathSeparatorChar);
+      // Usually, the most relevant paths will be at the front of the list,
+      // so hopefully this will not walk several entries.
+      for (String entry : entries) {
+        File dir = new File(entry);
+        // If it's a .jar file, get its parent folder. This will lead to some
+        // double-checking of the same folder, but probably almost as expensive
+        // to keep track of folders we've already seen.
+        if (dir.isFile()) {
+          dir = dir.getParentFile();
+        }
+        File file = new File(dir, what);
+        if (file.exists()) {
+          return file.getAbsolutePath();
+        }
+      }
+    }
+    return null;
+  }
+
+
   static protected void buildPaths() {
     // look for the gstreamer-1.0 folder in the native library path
     // (there are natives adjacent to it, so this will work)
-    gstreamerPluginPath = findNative("gstreamer-1.0");
+    gstreamerPluginPath = searchLibraryPath("gstreamer-1.0");
+    if (gstreamerPluginPath == null) {
+      gstreamerPluginPath = searchClassPath("gstreamer-1.0");
+    }
     if (gstreamerPluginPath == null) {
       System.err.println("Could not find gstreamer-1.0 folder on java.library.path");
       gstreamerPluginPath = "";
