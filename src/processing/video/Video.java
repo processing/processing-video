@@ -123,7 +123,7 @@ public class Video implements PConstants {
       }
       
       if (!rootPath.equals("")) {
-        if (PApplet.platform == MACOSX) {
+        if (PApplet.platform == MACOS) {
           gstreamerLibPath = Paths.get(rootPath, "lib").toString();
         } else {
           gstreamerLibPath = Paths.get(rootPath, "bin").toString();
@@ -138,7 +138,7 @@ public class Video implements PConstants {
         }
       } else {
         // No environmental variables defined, will try some default locations
-        if (PApplet.platform == MACOSX) {
+        if (PApplet.platform == MACOS) {
           rootPath = "/Library/Frameworks/GStreamer.framework/Versions/1.0";
           gstreamerLibPath = Paths.get(rootPath, "lib").toString(); 
         } else if (PApplet.platform == WINDOWS) {
@@ -180,6 +180,15 @@ public class Video implements PConstants {
     } 
       
     if (libPath == null && !usingGStreamerSystemInstall) {
+      // Paths are build automatically from the current location of the video
+      // library.
+      if (PApplet.platform == LINUX) {    
+        buildLinuxPaths();
+      } else if (PApplet.platform == WINDOWS) {
+        buildWindowsPaths();
+      } else if (PApplet.platform == MACOS) {
+        buildMacOSXPaths();
+      }
       buildPaths();
     }
 

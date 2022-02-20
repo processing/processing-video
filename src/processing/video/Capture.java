@@ -199,7 +199,7 @@ public class Capture extends PImage implements PConstants {
     try {
       dispose();
     } finally {
-      super.finalize();
+//      super.finalize();
     }
   }
 
@@ -347,6 +347,23 @@ public class Capture extends PImage implements PConstants {
   public int get(int x, int y) {
     if (outdatedPixels) loadPixels();
     return super.get(x, y);
+  }
+
+
+  /**
+   * @param w width of pixel rectangle to get
+   * @param h height of pixel rectangle to get
+   */
+  public PImage get(int x, int y, int w, int h) {
+    if (outdatedPixels) loadPixels();
+    return super.get(x, y, w, h);
+  }
+
+
+  @Override
+  public PImage copy() {
+    if (outdatedPixels) loadPixels();
+    return super.copy();
   }
 
 
