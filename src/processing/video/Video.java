@@ -180,15 +180,6 @@ public class Video implements PConstants {
     } 
       
     if (libPath == null && !usingGStreamerSystemInstall) {
-      // Paths are build automatically from the current location of the video
-      // library.
-      if (PApplet.platform == LINUX) {    
-        buildLinuxPaths();
-      } else if (PApplet.platform == WINDOWS) {
-        buildWindowsPaths();
-      } else if (PApplet.platform == MACOS) {
-        buildMacOSXPaths();
-      }
       buildPaths();
     }
 

@@ -3,7 +3,7 @@
 
 bin
 /dist
-/library/macosx*
+/library/macos*
 /library/windows*
 /library/linux*
 

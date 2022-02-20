@@ -14,7 +14,7 @@
   <fail unless="processing.dir"
         message="To make the build work, create a file named local.properties, with a line that reads:
 ${line.separator}processing.dir=/path/to/processing-git
-${line.separator}with the path to where you have the code for Processing 3 checked out. ${line.separator}(This script will look for the 'core' directory inside that folder.)" />
+${line.separator}with the path to where you have the code for Processing 4 checked out. ${line.separator}(This script will look for the 'core' directory inside that folder.)" />
 
   <subant buildpath="${processing.dir}/core" />
 
