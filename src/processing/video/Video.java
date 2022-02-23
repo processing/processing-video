@@ -326,6 +326,12 @@ public class Video implements PConstants {
     } else {
       File gstreamerLibDir = new File(gstreamerPluginPath).getParentFile();
       gstreamerLibPath = gstreamerLibDir.getAbsolutePath();
+
+      if (PApplet.platform == LINUX) {
+        String libPath = System.getenv("LD_LIBRARY_PATH");
+        libPath += ":" + gstreamerLibPath + ":" + gstreamerPluginPath;
+        Environment.libc.setenv("LD_LIBRARY_PATH", libPath, 1);
+      }
     }
   }
 
