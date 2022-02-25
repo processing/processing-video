@@ -34,6 +34,7 @@ import java.io.File;
 import java.nio.ByteOrder;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * This class contains some basic functions used by the rest of the classes in
@@ -328,9 +329,23 @@ public class Video implements PConstants {
       gstreamerLibPath = gstreamerLibDir.getAbsolutePath();
 
       if (PApplet.platform == LINUX) {
+        // Add gstreamer paths to LD_LIBRARY_PATH
         String libPath = System.getenv("LD_LIBRARY_PATH");
-        libPath += ":" + gstreamerLibPath + ":" + gstreamerPluginPath;
+        String libPath0 = Environment.libc.getenv("LD_LIBRARY_PATH");
+        if (libPath == null) {
+          libPath = "";
+        } else {
+          libPath = libPath.trim();
+          if (!libPath.equals("")) {
+            libPath += ":";
+          }
+        }
+        System.out.println("libPath before = " + libPath);
+        System.out.println("libPath from Libc = " + libPath0);
+        libPath += gstreamerLibPath + ":" + gstreamerPluginPath;
         Environment.libc.setenv("LD_LIBRARY_PATH", libPath, 1);
+        System.out.println("libPath after = " + System.getenv("LD_LIBRARY_PATH"));
+        System.out.println("libPath after from Libc = " + Environment.libc.getenv("LD_LIBRARY_PATH"));
       }
     }
   }
