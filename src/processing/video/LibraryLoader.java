@@ -157,7 +157,66 @@ public class LibraryLoader {
       { "swresample-3", new String[] {}, false }
     };
 
-  static final Object[][] MACOSX_DEPENDENCIES = {
+  static final Object[][] LINUX_DEPENDENCIES = {
+      { "libgstbase-1.0", new String[] {}, false },
+      { "libgstreamer-1.0", new String[] {}, false },
+      { "libgstadaptivedemux-1.0", new String[] {}, false },
+      { "libgstallocators-1.0", new String[] {}, false },
+      { "libgstapp-1.0", new String[] {}, false },
+      { "libgstaudio-1.0", new String[] {}, false },
+      { "libgstbadaudio-1.0", new String[] {}, false },
+      { "libgstbasecamerabinsrc-1.0", new String[] {}, false },
+      { "libgstcheck-1.0", new String[] {}, false },
+      { "libgstcodecparsers-1.0", new String[] {}, false },
+      { "libgstcontroller-1.0", new String[] {}, false },
+      { "libgstfft-1.0", new String[] {}, false },
+      { "libgstinsertbin-1.0", new String[] {}, false },
+      { "libgstisoff-1.0", new String[] {}, false },
+      { "libgstmpegts-1.0", new String[] {}, false },
+      { "libgstnet-1.0", new String[] {}, false },
+      { "libgstpbutils-1.0", new String[] {}, false },
+      { "libgstphotography-1.0", new String[] {}, false },
+      { "libgstplayer-1.0", new String[] {}, false },
+      { "libgstriff-1.0", new String[] {}, false },
+      { "libgstrtp-1.0", new String[] {}, false },
+      { "libgstrtsp-1.0", new String[] {}, false },
+      { "libgstrtspserver-1.0", new String[] {}, false },
+      { "libgstsctp-1.0", new String[] {}, false },
+      { "libgstsdp-1.0", new String[] {}, false },
+      { "libgsttag-1.0", new String[] {}, false },
+      { "libgsturidownloader-1.0", new String[] {}, false },
+      { "libgstvalidate-1.0", new String[] {}, false },
+      { "libgstvalidate-default-overrides-1.0", new String[] {}, false },
+      { "libgstvideo-1.0", new String[] {}, false },
+      { "libgstwebrtc-1.0", new String[] {}, false },
+
+      { "libglib-2.0", new String[] {}, false },
+      { "libgobject-2.0", new String[] {}, false },
+      { "libgio-2.0", new String[] {}, false },
+      { "libgmodule-2.0", new String[] {}, false },
+      { "libgthread-2.0", new String[] {}, false },
+
+      { "libavcodec", new String[] {}, false },
+      { "libavdevice", new String[] {}, false },
+      { "libavfilter", new String[] {}, false },
+      { "libavformat", new String[] {}, false },
+      { "libavresample", new String[] {}, false },
+      { "libavutil", new String[] {}, false },
+      { "libges-1.0", new String[] {}, false },
+      { "libjson-glib-1.0", new String[] {}, false },
+      { "libnice", new String[] {}, false },
+      { "libnice.10", new String[] {}, false },
+      { "libopenh264", new String[] {}, false },
+      { "libopenh264.4", new String[] {}, false },
+      { "liborc-0.4", new String[] {}, false },
+      { "liborc-test-0.4", new String[] {}, false },
+      { "libpostproc", new String[] {}, false },
+      { "libswresample", new String[] {}, false },
+      { "libswscale", new String[] {}, false },
+      { "libx264", new String[] {}, false }
+    };
+
+  static final Object[][] MACOS_DEPENDENCIES = {
       { "gstbase-1.0", new String[] { "gstreamer-1.0" }, true },
       { "gstinterfaces-1.0", new String[] { "gstreamer-1.0" }, true },
       { "gstcontroller-1.0", new String[] { "gstreamer-1.0" }, true },
@@ -175,7 +234,8 @@ public class LibraryLoader {
 
   static final Object[][] dependencies =
     Platform.isWindows() ? WINDOWS_DEPENDENCIES :
-      Platform.isMac() ? MACOSX_DEPENDENCIES : DEFAULT_DEPENDENCIES;
+    Platform.isLinux() ? LINUX_DEPENDENCIES :
+    Platform.isMac() ? MACOS_DEPENDENCIES : DEFAULT_DEPENDENCIES;
 
 
   private static final Map<String, Object> loadedMap =

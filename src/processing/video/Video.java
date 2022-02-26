@@ -219,6 +219,7 @@ public class Video implements PConstants {
     }
 
     if (PApplet.platform == LINUX) {
+      /*
       // Add gstreamer paths to LD_LIBRARY_PATH
       String ldLibPath = System.getenv("LD_LIBRARY_PATH");
       if (ldLibPath == null) {
@@ -231,8 +232,14 @@ public class Video implements PConstants {
         ldLibPath += ":" + gstreamerPluginPath;
       }
       Environment.libc.setenv("LD_LIBRARY_PATH", ldLibPath, true);
+      */
 //      System.out.println("LD_LIBRARY_PATH from Java's System = " + System.getenv("LD_LIBRARY_PATH"));
 //      System.out.println("LD_LIBRARY_PATH after from LibC    = " + Environment.libc.getenv("LD_LIBRARY_PATH"));
+
+      LibraryLoader loader = LibraryLoader.getInstance();
+      if (loader == null) {
+        System.err.println("Cannot load GStreamer libraries.");
+      }
     }
 
     String[] args = { "" };
