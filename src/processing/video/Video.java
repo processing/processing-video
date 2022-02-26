@@ -157,9 +157,9 @@ public class Video implements PConstants {
           // We have a system install of GStreamer
           usingGStreamerSystemInstall = true;
           if (bitsJVM == 64) {
-            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86_64", gstreamerLibPath, 1);  
+            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86_64", gstreamerLibPath, true);
           } else {
-            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86", gstreamerLibPath, 1); 
+            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86", gstreamerLibPath, true);
           }          
         }        
       }
@@ -192,7 +192,7 @@ public class Video implements PConstants {
       System.setProperty("jna.library.path", gstreamerLibPath);
     }
     
-    Environment.libc.setenv("GST_DEBUG", String.valueOf(DEBUG_LEVEL), 1);    
+    Environment.libc.setenv("GST_DEBUG", String.valueOf(DEBUG_LEVEL), true);
 
     if (!usingGStreamerSystemInstall) {
       // Disable the use of gst-plugin-scanner on environments where we're
@@ -200,13 +200,13 @@ public class Video implements PConstants {
       // the problem with gst-plugin-scanner is that the library expects it
       // to exist at a specific location determined at build time
       if (PApplet.platform != LINUX) {
-        Environment.libc.setenv("GST_REGISTRY_FORK", "no", 1);
+        Environment.libc.setenv("GST_REGISTRY_FORK", "no", true);
       }
 
       // Prevent globally installed libraries from being used on platforms
       // where we ship GStreamer
       if (!gstreamerPluginPath.equals("")) {
-        Environment.libc.setenv("GST_PLUGIN_SYSTEM_PATH_1_0", "", 1);
+        Environment.libc.setenv("GST_PLUGIN_SYSTEM_PATH_1_0", "", true);
       }
     }
 
@@ -216,7 +216,24 @@ public class Video implements PConstants {
       if (loader == null) {
         System.err.println("Cannot load GStreamer libraries.");
       }
-    }    
+    }
+
+    if (PApplet.platform == LINUX) {
+      // Add gstreamer paths to LD_LIBRARY_PATH
+      String ldLibPath = System.getenv("LD_LIBRARY_PATH");
+      if (ldLibPath == null) {
+        ldLibPath = "";
+      } else {
+        ldLibPath = ldLibPath.trim();
+        if (!ldLibPath.equals("")) {
+          ldLibPath += ":";
+        }
+      }
+      ldLibPath += gstreamerLibPath + ":" + gstreamerPluginPath;
+      Environment.libc.setenv("LD_LIBRARY_PATH", ldLibPath, true);
+//      System.out.println("LD_LIBRARY_PATH from Java's System = " + System.getenv("LD_LIBRARY_PATH"));
+//      System.out.println("LD_LIBRARY_PATH after from LibC    = " + Environment.libc.getenv("LD_LIBRARY_PATH"));
+    }
 
     String[] args = { "" };
     Gst.setUseDefaultContext(defaultGLibContext);
@@ -327,26 +344,6 @@ public class Video implements PConstants {
     } else {
       File gstreamerLibDir = new File(gstreamerPluginPath).getParentFile();
       gstreamerLibPath = gstreamerLibDir.getAbsolutePath();
-
-      if (PApplet.platform == LINUX) {
-        // Add gstreamer paths to LD_LIBRARY_PATH
-        String libPath = System.getenv("LD_LIBRARY_PATH");
-        String libPath0 = Environment.libc.getenv("LD_LIBRARY_PATH");
-        if (libPath == null) {
-          libPath = "";
-        } else {
-          libPath = libPath.trim();
-          if (!libPath.equals("")) {
-            libPath += ":";
-          }
-        }
-        System.out.println("libPath before = " + libPath);
-        System.out.println("libPath from Libc = " + libPath0);
-        libPath += gstreamerLibPath + ":" + gstreamerPluginPath;
-        Environment.libc.setenv("LD_LIBRARY_PATH", libPath, 1);
-        System.out.println("libPath after = " + System.getenv("LD_LIBRARY_PATH"));
-        System.out.println("libPath after from Libc = " + Environment.libc.getenv("LD_LIBRARY_PATH"));
-      }
     }
   }
 

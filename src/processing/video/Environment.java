@@ -53,9 +53,9 @@ public class Environment {
       }
     }
 
-    public int setenv(String name, String value, int overwrite) {
+    public int setenv(String name, String value, boolean overwrite) {
       if (libc instanceof UnixLibC) {
-        return ((UnixLibC)libc).setenv(name, value, overwrite);
+        return ((UnixLibC)libc).setenv(name, value, overwrite?1:0);
       }
       else {
         return ((WinLibC)libc)._putenv(name + "=" + value);
