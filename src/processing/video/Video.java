@@ -223,13 +223,13 @@ public class Video implements PConstants {
       String ldLibPath = System.getenv("LD_LIBRARY_PATH");
       if (ldLibPath == null) {
         ldLibPath = "";
-      } else {
-        ldLibPath = ldLibPath.trim();
-        if (!ldLibPath.equals("")) {
-          ldLibPath += ":";
-        }
       }
-      ldLibPath += gstreamerLibPath + ":" + gstreamerPluginPath;
+      if (!ldLibPath.contains(gstreamerLibPath)) {
+        ldLibPath += ":" + gstreamerLibPath;
+      }
+      if (!ldLibPath.contains(gstreamerPluginPath)) {
+        ldLibPath += ":" + gstreamerPluginPath;
+      }
       Environment.libc.setenv("LD_LIBRARY_PATH", ldLibPath, true);
 //      System.out.println("LD_LIBRARY_PATH from Java's System = " + System.getenv("LD_LIBRARY_PATH"));
 //      System.out.println("LD_LIBRARY_PATH after from LibC    = " + Environment.libc.getenv("LD_LIBRARY_PATH"));
