@@ -3,7 +3,7 @@
 /*
   Part of the Processing project - http://processing.org
 
-  Copyright (c) 2012-19 The Processing Foundation
+  Copyright (c) 2012-22 The Processing Foundation
   Copyright (c) 2011-12 Ben Fry and Casey Reas
   GStreamer implementation ported from GSVideo library by Andres Colubri
 
@@ -28,13 +28,11 @@ package processing.video;
 import org.freedesktop.gstreamer.*;
 import processing.core.PApplet;
 import processing.core.PConstants;
-import processing.data.StringList;
 
 import java.io.File;
 import java.nio.ByteOrder;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * This class contains some basic functions used by the rest of the classes in
@@ -94,10 +92,13 @@ public class Video implements PConstants {
     //    the library from Eclipse.
     // 2) If the environmental variable is GSTREAMER_1_0_ROOT_X86(_64) is defined then 
     //    will try to use its contents as the root path of the system install of GStreamer.
-    // 3) If GSTREAMER_1_0_ROOT_X86(_64) is not defined, then will try to use default 
-    //    install locations of GStreamer on Windows and Mac, if they exist.
-    // 4) If none of the above works, the bundled version of GStreamer will be used.
-    // In this way, priority is given to the system installation of GStreamer. 
+    // 3) The bundled version of GStreamer will be used, if present.
+    // 4) If none of the above works, then will try to use default install locations of GStreamer
+    //    on Windows and Mac, if they exist.
+    // In this way, priority is given to the system installation of GStreamer only if set in the
+    // environmental variables, otherwise will try to load the bundled GStreamer, and if it does not
+    // exist it will look for GStreamer in the system-wide locations. This gives the user the option
+    // to remove the bundled GStreamer libs to default to the system-wide installation.
     String libPath = System.getProperty("gstreamer.library.path");
     if (libPath != null) {
       gstreamerLibPath = libPath;
@@ -133,55 +134,59 @@ public class Video implements PConstants {
         if (path.exists()) {
           // We have a system install of GStreamer
           usingGStreamerSystemInstall = true;
+          buildSystemPaths(rootPath);
         } else {
           // The environmental variables contain invalid paths...
           gstreamerLibPath = "";
         }
-      } else {
-        // No environmental variables defined, will try some default locations
-        if (PApplet.platform == MACOS) {
-          rootPath = "/Library/Frameworks/GStreamer.framework/Versions/1.0";
-          gstreamerLibPath = Paths.get(rootPath, "lib").toString(); 
-        } else if (PApplet.platform == WINDOWS) {
-          // We are on Windows.
-          if (bitsJVM == 64) {
-            rootPath = "C:\\gstreamer\\1.0\\x86_64";
-          } else {
-            rootPath = "C:\\gstreamer\\1.0\\x86";
-          }
-          gstreamerLibPath = Paths.get(rootPath, "bin").toString();
-        }
-        
-        File path = new File(gstreamerLibPath);
-        if (path.exists()) {
-          // We have a system install of GStreamer
-          usingGStreamerSystemInstall = true;
-          if (bitsJVM == 64) {
-            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86_64", gstreamerLibPath, true);
-          } else {
-            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86", gstreamerLibPath, true);
-          }          
-        }        
-      }
-      
-      if (usingGStreamerSystemInstall) {
-        if (System.getenv("GST_PLUGIN_SYSTEM_PATH") != null) {
-          gstreamerPluginPath = System.getenv("GST_PLUGIN_SYSTEM_PATH");
-        } else {
-          if (PApplet.platform == WINDOWS) {
-            gstreamerPluginPath = Paths.get(rootPath, "lib", "gstreamer-1.0").toString();
-          } else {
-            gstreamerPluginPath = Paths.get(gstreamerLibPath, "gstreamer-1.0").toString();          }
-        }
-        File path = new File(gstreamerPluginPath);
-        if (!path.exists()) {
-          gstreamerPluginPath = "";
-        }        
       }
     } 
       
     if (libPath == null && !usingGStreamerSystemInstall) {
-      buildPaths();
+      // No GStreamer path in the VM arguments, and not system-wide install in environmental variables,
+      // will try searching for the bundled GStreamer libs.
+      buildBundldedPaths();
+    }
+
+    if (gstreamerLibPath.equals("")) {
+      // Finally, no environmental variables defined and did not find bundled gstreamer,
+      // will try some default system-wide locations.
+      String rootPath = "";
+      if (PApplet.platform == MACOS) {
+        rootPath = "/Library/Frameworks/GStreamer.framework/Versions/1.0";
+        gstreamerLibPath = Paths.get(rootPath, "lib").toString();
+      } else if (PApplet.platform == WINDOWS) {
+        if (bitsJVM == 64) {
+          rootPath = "C:\\gstreamer\\1.0\\x86_64";
+        } else {
+          rootPath = "C:\\gstreamer\\1.0\\x86";
+        }
+        gstreamerLibPath = Paths.get(rootPath, "bin").toString();
+      } else if (PApplet.platform == LINUX) {
+        if (bitsJVM == 64) {
+          rootPath = "/lib/x86_64-linux-gnu";
+        } else {
+          rootPath = "/lib/x86-linux-gnu";
+        }
+        File gstlib = new File(rootPath, "libgstreamer-1.0.so.0");
+        if (gstlib.exists()) {
+          gstreamerLibPath = Paths.get(rootPath).toString();
+        }
+      }
+
+      File path = new File(gstreamerLibPath);
+      if (path.exists()) {
+        // We have a system install of GStreamer
+        if (bitsJVM == 64) {
+          Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86_64", gstreamerLibPath, true);
+        } else {
+          Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86", gstreamerLibPath, true);
+        }
+        buildSystemPaths(rootPath);
+      } else {
+        System.err.println("We could not find a system-wide or bundled installation of GStreamer, but video might still work if GStreamer was placed somewhere else");
+      }
+      usingGStreamerSystemInstall = true;
     }
 
     if (!gstreamerLibPath.equals("")) {
@@ -199,9 +204,7 @@ public class Video implements PConstants {
       // not using the host system's installation of GStreamer
       // the problem with gst-plugin-scanner is that the library expects it
       // to exist at a specific location determined at build time
-      if (PApplet.platform != LINUX) {
-        Environment.libc.setenv("GST_REGISTRY_FORK", "no", true);
-      }
+      Environment.libc.setenv("GST_REGISTRY_FORK", "no", true);
 
       // Prevent globally installed libraries from being used on platforms
       // where we ship GStreamer
@@ -210,32 +213,9 @@ public class Video implements PConstants {
       }
     }
 
-    if (PApplet.platform == WINDOWS) {
-      // Pre-loading base GStreamer libraries on Windows, otherwise nothing works
-      LibraryLoader loader = LibraryLoader.getInstance();
-      if (loader == null) {
-        System.err.println("Cannot load GStreamer libraries.");
-      }
-    }
-
-    if (PApplet.platform == LINUX) {
-      /*
-      // Add gstreamer paths to LD_LIBRARY_PATH
-      String ldLibPath = System.getenv("LD_LIBRARY_PATH");
-      if (ldLibPath == null) {
-        ldLibPath = "";
-      }
-      if (!ldLibPath.contains(gstreamerLibPath)) {
-        ldLibPath += ":" + gstreamerLibPath;
-      }
-      if (!ldLibPath.contains(gstreamerPluginPath)) {
-        ldLibPath += ":" + gstreamerPluginPath;
-      }
-      Environment.libc.setenv("LD_LIBRARY_PATH", ldLibPath, true);
-      */
-//      System.out.println("LD_LIBRARY_PATH from Java's System = " + System.getenv("LD_LIBRARY_PATH"));
-//      System.out.println("LD_LIBRARY_PATH after from LibC    = " + Environment.libc.getenv("LD_LIBRARY_PATH"));
-
+    if (!usingGStreamerSystemInstall && (PApplet.platform == WINDOWS || PApplet.platform == LINUX)) {
+      // Pre-loading base GStreamer libraries on Windows and Linux,
+      // otherwise dynamic dependencies cannot be resolved.
       LibraryLoader loader = LibraryLoader.getInstance();
       if (loader == null) {
         System.err.println("Cannot load GStreamer libraries.");
@@ -258,7 +238,10 @@ public class Video implements PConstants {
   }
 
   static protected void printGStreamerInfo() {
-    System.out.println("Processing video library using GStreamer " + Gst.getVersion());
+    String locInfo = "";
+    if (usingGStreamerSystemInstall) locInfo = "system-wide";
+    else locInfo = "bundled";
+    System.out.println("Processing video library using " + locInfo + " GStreamer " + Gst.getVersion());
   }
 
   
@@ -296,6 +279,9 @@ public class Video implements PConstants {
       // Usually, the most relevant paths will be at the front of the list,
       // so hopefully this will not walk several entries.
       for (String folder : folders) {
+        // Skip /lib and /usr/lib folders because they contain the system-wide GStreamer on Linux
+        // and they are on the Java library path.
+        if (folder.startsWith("/lib/") || folder.startsWith("/usr/lib/")) continue;
         File file = new File(folder, what);
         if (file.exists()) {
           return file.getAbsolutePath();
@@ -335,16 +321,30 @@ public class Video implements PConstants {
     return null;
   }
 
+  static protected void buildSystemPaths(String rootPath) {
+    if (System.getenv("GST_PLUGIN_SYSTEM_PATH") != null) {
+      gstreamerPluginPath = System.getenv("GST_PLUGIN_SYSTEM_PATH");
+    } else {
+      if (PApplet.platform == WINDOWS) {
+        gstreamerPluginPath = Paths.get(rootPath, "lib", "gstreamer-1.0").toString();
+      } else {
+        gstreamerPluginPath = Paths.get(gstreamerLibPath, "gstreamer-1.0").toString();          }
+    }
+    File path = new File(gstreamerPluginPath);
+    if (!path.exists()) {
+      gstreamerPluginPath = "";
+    }
+  }
 
-  static protected void buildPaths() {
+  static protected void buildBundldedPaths() {
     // look for the gstreamer-1.0 folder in the native library path
     // (there are natives adjacent to it, so this will work)
     gstreamerPluginPath = searchLibraryPath("gstreamer-1.0");
     if (gstreamerPluginPath == null) {
       gstreamerPluginPath = searchClassPath("gstreamer-1.0");
     }
+
     if (gstreamerPluginPath == null) {
-      System.err.println("Could not find gstreamer-1.0 folder on java.library.path");
       gstreamerPluginPath = "";
       gstreamerLibPath = "";
       usingGStreamerSystemInstall = true;

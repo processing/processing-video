@@ -3,7 +3,7 @@
 /*
   Part of the Processing project - http://processing.org
 
-  Copyright (c) 2012-19 The Processing Foundation
+  Copyright (c) 2012-22 The Processing Foundation
   Copyright (c) 2004-12 Ben Fry and Casey Reas
   GStreamer implementation ported from GSVideo library by Andres Colubri
   The previous version of this code was developed by Hernando Barragan
