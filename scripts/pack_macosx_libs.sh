@@ -19,7 +19,7 @@ else
 fi
 
 gst_folder=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib
-lib_folder=../library/macosx
+lib_folder=../library/macos-universal
 
 echo "Copying base gstreamer libs..."
 mkdir -p ${lib_folder}

@@ -12,7 +12,7 @@ import sys
 import subprocess
 import re
 
-lib_folder = '../library/macosx'
+lib_folder = '../library/macos-universal'
 
 # First, remove libraries from packages we don't bundle with the video library:
 # gstreamer-1.0-codecs-gpl
