@@ -91,7 +91,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
       <arg value="--options" />
       <arg value="runtime" />
 
-      <fileset dir="library/macosx">
+      <fileset dir="library/macos-universal">
         <patternset>
           <include name="**/*.dylib" />
         </patternset>
