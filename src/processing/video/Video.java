@@ -225,16 +225,16 @@ public class Video implements PConstants {
     String[] args = { "" };
     Gst.setUseDefaultContext(defaultGLibContext);
     Gst.init("Processing core video", args);
+
+    // Output GStreamer version, lib path, plugin path
+    // and whether a system install is being used
+    printGStreamerInfo();
    
     if (!usingGStreamerSystemInstall) {
       // Plugins are scanned explicitly from the bindings if using the
-      // local GStreamer
-      addPlugins();
+      // local GStreamer      
+      scanPlugins();
     }
-  
-    // output GStreamer version, lib path, plugin path
-    // and whether a system install is being used
-    printGStreamerInfo();
   }
 
   static protected void printGStreamerInfo() {
@@ -245,13 +245,16 @@ public class Video implements PConstants {
   }
 
   
-  static protected void addPlugins() {
+  static protected void scanPlugins() {
     if (!gstreamerPluginPath.equals("")) {
       Registry reg = Registry.get();
       boolean res;
+      System.out.print("Scanning GStreamer plugins...");
       res = reg.scanPath(gstreamerPluginPath);
-      if (!res) {
-        System.err.println("Cannot load GStreamer plugins from " + gstreamerPluginPath);
+      if (res) {
+        System.out.println(" Done.");
+      } else {
+        System.err.println("Cannot load GStreamer plugins from " + gstreamerPluginPath);      
       }
     }
   }
