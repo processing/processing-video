@@ -1,11 +1,11 @@
 /**
  * ASCII Video
- * by Ben Fry. 
+ * by Ben Fry.
  *
- * 
+ *
  * Text characters have been used to represent images since the earliest computers.
  * This sketch is a simple homage that re-interprets live video as ASCII text.
- * See the keyPressed function for more options, like changing the font size.
+ * See the keyPressed() function for more options, like changing the font size.
  */
 
 import processing.video.*;
@@ -13,14 +13,13 @@ import processing.video.*;
 Capture video;
 boolean cheatScreen;
 
-// All ASCII characters, sorted according to their visual density
+// Characters sorted according to their visual density
 String letterOrder =
   " .`-_':,;^=+/\"|)\\<>)iv%xclrs{*}I?!][1taeo7zjLu" +
   "nT#JCwfy325Fp6mqSghVd4EgXPGZbYkOA&8U$@KHDBWNMR0Q";
 char[] letters;
 
 float[] bright;
-char[] chars;
 
 PFont font;
 float fontSize = 1.5;
@@ -29,13 +28,13 @@ float fontSize = 1.5;
 void setup() {
   size(640, 480);
 
-  // This the default video input, see the GettingStartedCapture 
+  // This the default video input, see the GettingStartedCapture
   // example if it creates an error
   video = new Capture(this, 160, 120);
-  
+
   // Start capturing the images from the camera
-  video.start();  
-  
+  video.start();
+
   int count = video.width * video.height;
   //println(count);
 
@@ -48,9 +47,6 @@ void setup() {
     int index = int(map(i, 0, 256, 0, letterOrder.length()));
     letters[i] = letterOrder.charAt(index);
   }
-
-  // current characters for each position in the video
-  chars = new char[count];
 
   // current brightness for each point
   bright = new float[count];
@@ -87,7 +83,7 @@ void draw() {
     pushMatrix();
     for (int x = 0; x < video.width; x++) {
       int pixelColor = video.pixels[index];
-      // Faster method of calculating r, g, b than red(), green(), blue() 
+      // Faster method of calculating r, g, b than red(), green(), blue()
       int r = (pixelColor >> 16) & 0xff;
       int g = (pixelColor >> 8) & 0xff;
       int b = pixelColor & 0xff;
@@ -105,7 +101,7 @@ void draw() {
       fill(pixelColor);
       int num = int(bright[index]);
       text(letters[num], 0, 0);
-      
+
       // Move to the next pixel
       index++;
 
