@@ -34,10 +34,13 @@ echo "Copying gstreamer plugins..."
 mkdir -p ${lib_folder_univ}/gstreamer-1.0
 cp ${gst_folder}/gstreamer-1.0/* ${lib_folder_univ}/gstreamer-1.0
 
-# Silence runtime error from these plugins
+# Remove plugins that give runtime errors:
+rm -f ${lib_folder_univ}/gstreamer-1.0/libgstsrt.dylib
+rm -f ${lib_folder_univ}/gstreamer-1.0/libgstsrtp.dylib
+
+# These seem okay now (with GStreamer 1.20.x)
 # rm -f ${lib_folder_univ}/gstreamer-1.0/libgsthls.so
 # rm -f ${lib_folder_univ}/gstreamer-1.0/libgstopenjpeg.so
-rm -f ${lib_folder_univ}/gstreamer-1.0/libgstsrt.dylib
 
 echo "Relocating dependencies in gstreamer plugins..."
 ./macosx_relocator.py ${lib_folder_univ}/gstreamer-1.0 ${dep_path} "@loader_path/../"
@@ -45,7 +48,7 @@ echo "Relocating dependencies in gstreamer plugins..."
 echo "Removing unused dependencies..."
 ./macosx_remove_extra_libs.py
 
-echo "Thinning x86_64 and aarch64 native libraries..."
+echo "Extracting x86_64 and aarch64 native libraries..."
 
 mkdir -p ${lib_folder_x86_64}
 mkdir -p ${lib_folder_aarch64}
@@ -62,5 +65,8 @@ for file in ${lib_folder_univ}/gstreamer-1.0/*.dylib; do
   lipo ${file} -thin x86_64 -output ${lib_folder_x86_64}/gstreamer-1.0/${fn};
   lipo ${file} -thin arm64 -output ${lib_folder_aarch64}/gstreamer-1.0/${fn};
 done
+
+echo "Removing universal native libraries..."
+rm -rf ${lib_folder_univ}
 
 echo "Done."
