@@ -53,7 +53,7 @@ import org.freedesktop.gstreamer.event.SeekType;
  * @usage application
  */
 public class Movie extends PImage implements PConstants {
-  public static String[] supportedProtocols = { "http" };
+  public static String[] supportedProtocols = { "http", "https" };
 
   public String filename;
   public PlayBin playbin;
