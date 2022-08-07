@@ -63,7 +63,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
     <delete dir="bin" />
   </target>
 
-  <target name="macosx-dist-sign" if="env.VIDEO_APPLE_ID">
+  <target name="macosx-dist-sign" if="env.APPLE_DEV_COMMON_NAME">
     <echo>
       Code signing will only work if you have a $99/yr Apple developer ID.
 
@@ -76,7 +76,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
 
     <apply executable="/usr/bin/codesign" dir="library" failonerror="true">
       <arg value="--sign" />
-      <arg value="Developer ID Application" />
+      <arg value="${env.APPLE_DEV_COMMON_NAME}" />
 
       <!-- remove all other signatures -->
       <arg value="--force" />
@@ -91,11 +91,11 @@ ${line.separator}with the path to where you have the code for Processing 4 check
       <arg value="--options" />
       <arg value="runtime" />
 
-      <fileset dir="library/macos-universal">
+      <multirootfileset basedirs="library/macos-aarch64,library/macos-x86_64">
         <patternset>
           <include name="**/*.dylib" />
         </patternset>
-      </fileset>
+      </multirootfileset>
     </apply>
 
     <!-- Verify that the signature will pass Gatekeeper checks
@@ -115,7 +115,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
     </echo>    
   </target>
 
-  <target name="macosx-dist-notarize" if="env.VIDEO_APPLE_ID">
+  <target name="macosx-dist-notarize" if="env.APPLE_ID">
     <!-- xcrun: error: unable to find utility "altool", not a developer tool or in PATH -->
     <!-- fix with 'sudo xcode-select -r' -->
 
@@ -133,7 +133,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
       <arg value="processing.video" />
 
       <arg value="--username" />
-      <arg value="${env.VIDEO_APPLE_ID}" />
+      <arg value="${env.APPLE_ID}" />
 
       <arg value="--password" />
       <arg value="${env.VIDEO_LIB_PASSWORD}" />
@@ -149,7 +149,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
     <echo>
       Check on notarization status with:
 
-      xcrun altool -u $VIDEO_APPLE_ID -p $VIDEO_LIB_PASSWORD --notarization-info [the RequestUUID above]
+      xcrun altool -u $APPLE_ID -p $VIDEO_LIB_PASSWORD --notarization-info [the RequestUUID above]
     </echo>
   </target>
 
