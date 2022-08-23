@@ -90,7 +90,7 @@ public class Video implements PConstants {
     // 1) If the VM argument "gstreamer.library.path" exists, it will use it as the
     //    root location of the libraries. This is typically the case when running 
     //    the library from Eclipse.
-    // 2) If the environmental variable is GSTREAMER_1_0_ROOT_X86(_64) is defined then 
+    // 2) If the environmental variable is GSTREAMER_1_0_ROOT_(MINGW/MSVC)_64 is defined then 
     //    will try to use its contents as the root path of the system install of GStreamer.
     // 3) The bundled version of GStreamer will be used, if present.
     // 4) If none of the above works, then will try to use default install locations of GStreamer
@@ -100,6 +100,7 @@ public class Video implements PConstants {
     // exist it will look for GStreamer in the system-wide locations. This gives the user the option
     // to remove the bundled GStreamer libs to default to the system-wide installation.
     String libPath = System.getProperty("gstreamer.library.path");
+    int winBuildType = 0; // 0: default build, 1: mingw, 2: msvc
     if (libPath != null) {
       gstreamerLibPath = libPath;
       
@@ -114,14 +115,20 @@ public class Video implements PConstants {
       }
       
       usingGStreamerSystemInstall = false;
-    } else {
+    } else { 
       String rootPath = "";
-      if (bitsJVM == 64 && System.getenv("GSTREAMER_1_0_ROOT_X86_64") != null) {
+      if (bitsJVM == 64) {
         // Get 64-bit root of GStreamer install
-        rootPath = System.getenv("GSTREAMER_1_0_ROOT_X86_64");
-      } else if (bitsJVM == 32 && System.getenv("GSTREAMER_1_0_ROOT_X86") != null) {
-        // Get 32-bit root of GStreamer install
-        rootPath = System.getenv("GSTREAMER_1_0_ROOT_X86");  
+        if (System.getenv("GSTREAMER_1_0_ROOT_X86_64") != null) {
+          winBuildType = 0;
+          rootPath = System.getenv("GSTREAMER_1_0_ROOT_X86_64");
+        } else if (System.getenv("GSTREAMER_1_0_ROOT_MINGW_X86_64") != null) {
+          winBuildType = 1;
+          rootPath = System.getenv("GSTREAMER_1_0_ROOT_MINGW_X86_64");          
+        } else if (System.getenv("GSTREAMER_1_0_ROOT_MSVC_X86_64") != null) {
+          winBuildType = 2;
+          rootPath = System.getenv("GSTREAMER_1_0_ROOT_MSVC_X86_64");          
+        }
       }
       
       if (!rootPath.equals("")) {
@@ -145,7 +152,10 @@ public class Video implements PConstants {
     if (libPath == null && !usingGStreamerSystemInstall) {
       // No GStreamer path in the VM arguments, and not system-wide install in environmental variables,
       // will try searching for the bundled GStreamer libs.
-      buildBundldedPaths();
+      if (buildBundldedPaths()) {
+        // Found bundled GStreamer libs, which in version 2.2 of the library are MSVC-built:
+        winBuildType = 2;
+      }
     }
 
     if (gstreamerLibPath.equals("")) {
@@ -157,11 +167,18 @@ public class Video implements PConstants {
         gstreamerLibPath = Paths.get(rootPath, "lib").toString();
       } else if (PApplet.platform == WINDOWS) {
         if (bitsJVM == 64) {
-          rootPath = "C:\\gstreamer\\1.0\\x86_64";
-        } else {
-          rootPath = "C:\\gstreamer\\1.0\\x86";
+          if (new File("C:\\gstreamer\\1.0\\x86_64").exists()) {
+            winBuildType = 0;
+            rootPath = "C:\\gstreamer\\1.0\\x86_64";
+          } else if (new File("C:\\gstreamer\\1.0\\mingw_x86_64").exists()) {
+            winBuildType = 1;
+            rootPath = "C:\\gstreamer\\1.0\\mingw_x86_64";
+          } else if (new File("C:\\gstreamer\\1.0\\msvc_x86_64").exists()) {
+            winBuildType = 2;
+            rootPath = "C:\\gstreamer\\1.0\\msvc_x86_64";
+          }
+          gstreamerLibPath = Paths.get(rootPath, "bin").toString();  
         }
-        gstreamerLibPath = Paths.get(rootPath, "bin").toString();
       } else if (PApplet.platform == LINUX) {
         if (bitsJVM == 64) {
           rootPath = "/lib/x86_64-linux-gnu";
@@ -178,9 +195,13 @@ public class Video implements PConstants {
       if (path.exists()) {
         // We have a system install of GStreamer
         if (bitsJVM == 64) {
-          Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86_64", gstreamerLibPath, true);
-        } else {
-          Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86", gstreamerLibPath, true);
+          if (winBuildType == 0) {
+            Environment.libc.setenv("GSTREAMER_1_0_ROOT_X86_64", gstreamerLibPath, true);
+          } else if (winBuildType == 1) {
+            Environment.libc.setenv("GSTREAMER_1_0_ROOT_MINGW_X86_64", gstreamerLibPath, true);
+          } else if (winBuildType == 2) {
+            Environment.libc.setenv("GSTREAMER_1_0_ROOT_MSVC_X86_64", gstreamerLibPath, true);
+          }
         }
         buildSystemPaths(rootPath);
       } else {
@@ -213,10 +234,10 @@ public class Video implements PConstants {
       }
     }
 
-    if (!usingGStreamerSystemInstall && (PApplet.platform == WINDOWS || PApplet.platform == LINUX)) {
-      // Pre-loading base GStreamer libraries on Windows and Linux,
+    if (PApplet.platform == WINDOWS || (!usingGStreamerSystemInstall && PApplet.platform == LINUX)) {
+      // Pre-loading base GStreamer libraries on Windows and Linux, 
       // otherwise dynamic dependencies cannot be resolved.
-      LibraryLoader loader = LibraryLoader.getInstance();
+      LibraryLoader loader = LibraryLoader.getInstance(winBuildType);
       if (loader == null) {
         System.err.println("Cannot load GStreamer libraries.");
       }
@@ -339,7 +360,7 @@ public class Video implements PConstants {
     }
   }
 
-  static protected void buildBundldedPaths() {
+  static protected boolean buildBundldedPaths() {
     // look for the gstreamer-1.0 folder in the native library path
     // (there are natives adjacent to it, so this will work)
     gstreamerPluginPath = searchLibraryPath("gstreamer-1.0");
@@ -351,9 +372,11 @@ public class Video implements PConstants {
       gstreamerPluginPath = "";
       gstreamerLibPath = "";
       usingGStreamerSystemInstall = true;
+      return false;
     } else {
       File gstreamerLibDir = new File(gstreamerPluginPath).getParentFile();
       gstreamerLibPath = gstreamerLibDir.getAbsolutePath();
+      return true;
     }
   }
 

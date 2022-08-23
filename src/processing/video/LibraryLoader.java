@@ -44,8 +44,36 @@ public class LibraryLoader {
 
   private static LibraryLoader instance;
 
-  static final Object[][] WINDOWS_DEPENDENCIES = {
-      // Core GStreamer libraries
+  static final Object[][] WINDOWS_MINGW_DEPENDENCIES = {
+      // Base GStreamer native libraries for a COMPLETE MINGW installation 
+      { "avcodec-58", new String[] {}, false },
+      { "avfilter-7", new String[] {}, false },
+      { "avformat-58", new String[] {}, false },
+      { "avutil-56", new String[] {}, false },
+      { "libass-9", new String[] {}, false },
+      { "libbz2", new String[] {}, false },
+      { "libcairo-2", new String[] {}, false },
+      { "libcairo-gobject-2", new String[] {}, false },
+      { "libcairo-script-interpreter-2", new String[] {}, false },
+      { "libcharset-1", new String[] {}, false },
+      { "libcroco-0.6-3", new String[] {}, false },
+      { "libcrypto-1_1-x64", new String[] {}, false },
+      { "libdca-0", new String[] {}, false },
+      { "libdv-4", new String[] {}, false },
+      { "libexpat-1", new String[] {}, false },
+      { "libffi-7", new String[] {}, false },
+      { "libFLAC-8", new String[] {}, false },
+      { "libfontconfig-1", new String[] {}, false },
+      { "libfreetype-6", new String[] {}, false },
+      { "libfribidi-0", new String[] {}, false },
+      { "libgcc_s_seh-1", new String[] {}, false },
+      { "libgdk_pixbuf-2.0-0", new String[] {}, false },
+      { "libges-1.0-0", new String[] {}, false },
+      { "libgio-2.0-0", new String[] {}, false },
+      { "libglib-2.0-0", new String[] {}, false },
+      { "libgmodule-2.0-0", new String[] {}, false },
+      { "libgobject-2.0-0", new String[] {}, false },
+      { "libgraphene-1.0-0", new String[] {}, false },
       { "libgstadaptivedemux-1.0-0", new String[] {}, false },
       { "libgstallocators-1.0-0", new String[] {}, false },
       { "libgstapp-1.0-0", new String[] {}, false },
@@ -55,7 +83,9 @@ public class LibraryLoader {
       { "libgstbasecamerabinsrc-1.0-0", new String[] {}, false },
       { "libgstcheck-1.0-0", new String[] {}, false },
       { "libgstcodecparsers-1.0-0", new String[] {}, false },
+      { "libgstcodecs-1.0-0", new String[] {}, false },
       { "libgstcontroller-1.0-0", new String[] {}, false },
+      { "libgstd3d11-1.0-0", new String[] {}, false },
       { "libgstfft-1.0-0", new String[] {}, false },
       { "libgstgl-1.0-0", new String[] {}, false },
       { "libgstinsertbin-1.0-0", new String[] {}, false },
@@ -64,6 +94,7 @@ public class LibraryLoader {
       { "libgstnet-1.0-0", new String[] {}, false },
       { "libgstpbutils-1.0-0", new String[] {}, false },
       { "libgstphotography-1.0-0", new String[] {}, false },
+      { "libgstplay-1.0-0", new String[] {}, false },
       { "libgstplayer-1.0-0", new String[] {}, false },
       { "libgstreamer-1.0-0", new String[] {}, false },
       { "libgstriff-1.0-0", new String[] {}, false },
@@ -73,49 +104,26 @@ public class LibraryLoader {
       { "libgstsctp-1.0-0", new String[] {}, false },
       { "libgstsdp-1.0-0", new String[] {}, false },
       { "libgsttag-1.0-0", new String[] {}, false },
+      { "libgsttranscoder-1.0-0", new String[] {}, false },
       { "libgsturidownloader-1.0-0", new String[] {}, false },
+      { "libgstvalidate-1.0-0", new String[] {}, false },
       { "libgstvideo-1.0-0", new String[] {}, false },
       { "libgstwebrtc-1.0-0", new String[] {}, false },
-
-      // External libraries
-      { "libbz2", new String[] {}, false },
-      { "libcairo-2", new String[] {}, false },
-      { "libcairo-gobject-2", new String[] {}, false },
-      { "libcairo-script-interpreter-2", new String[] {}, false },
-      { "libcroco-0.6-3", new String[] {}, false },
-      { "libcrypto-1_1-x64", new String[] {}, false },
-      { "libdv-4", new String[] {}, false },
-      { "libexpat-1", new String[] {}, false },
-      { "libffi-7", new String[] {}, false },
-      { "libFLAC-8", new String[] {}, false },
-      { "libfontconfig-1", new String[] {}, false },
-      { "libfreetype-6", new String[] {}, false },
-      { "libfribidi-0", new String[] {}, false },
-      { "libgcc_s_sjlj-1", new String[] {}, false },
-      { "libgdk_pixbuf-2.0-0", new String[] {}, false },
-      { "libgio-2.0-0", new String[] {}, false },
-      { "libglib-2.0-0", new String[] {}, false },
-      { "libgmodule-2.0-0", new String[] {}, false },
-      { "libgmp-10", new String[] {}, false },
-      { "libgnutls-30", new String[] {}, false },
-      { "libgnutlsxx-28", new String[] {}, false },
-      { "libgobject-2.0-0", new String[] {}, false },
-      { "libgomp-1", new String[] {}, false },
-      { "libgraphene-1.0-0", new String[] {}, false },
       { "libgthread-2.0-0", new String[] {}, false },
       { "libharfbuzz-0", new String[] {}, false },
-      { "libhogweed-4", new String[] {}, false },
+      { "libiconv-2", new String[] {}, false },
       { "libintl-8", new String[] {}, false },
       { "libjpeg-8", new String[] {}, false },
       { "libjson-glib-1.0-0", new String[] {}, false },
       { "libkate-1", new String[] {}, false },
       { "libmp3lame-0", new String[] {}, false },
       { "libmpg123-0", new String[] {}, false },
-      { "libnettle-6", new String[] {}, false },
       { "libnice-10", new String[] {}, false },
       { "libogg-0", new String[] {}, false },
       { "liboggkate-1", new String[] {}, false },
-      { "libopenh264", new String[] {}, false },
+      { "libopencore-amrnb-0", new String[] {}, false },
+      { "libopencore-amrwb-0", new String[] {}, false },
+      { "libopenh264-6", new String[] {}, false },
       { "libopenjp2", new String[] {}, false },
       { "libopus-0", new String[] {}, false },
       { "liborc-0.4-0", new String[] {}, false },
@@ -126,36 +134,159 @@ public class LibraryLoader {
       { "libpangowin32-1.0-0", new String[] {}, false },
       { "libpixman-1-0", new String[] {}, false },
       { "libpng16-16", new String[] {}, false },
+      { "libpsl-5", new String[] {}, false },
       { "librsvg-2-2", new String[] {}, false },
+      { "librtmp-1", new String[] {}, false },
       { "libsbc-1", new String[] {}, false },
+      { "libSoundTouch-1", new String[] {}, false },
       { "libsoup-2.4-1", new String[] {}, false },
       { "libspandsp-2", new String[] {}, false },
       { "libspeex-1", new String[] {}, false },
+      { "libsqlite3-0", new String[] {}, false },
       { "libsrt", new String[] {}, false },
-      { "libsrtp", new String[] {}, false },
+      { "libsrtp2-1", new String[] {}, false },
       { "libssl-1_1-x64", new String[] {}, false },
       { "libstdc++-6", new String[] {}, false },
       { "libtag", new String[] {}, false },
-      { "libtasn1-6", new String[] {}, false },
       { "libtheora-0", new String[] {}, false },
       { "libtheoradec-1", new String[] {}, false },
       { "libtheoraenc-1", new String[] {}, false },
       { "libtiff-5", new String[] {}, false },
       { "libturbojpeg-0", new String[] {}, false },
-      { "libusrsctp-1", new String[] {}, false },
+      { "libvo-aacenc-0", new String[] {}, false },
       { "libvorbis-0", new String[] {}, false },
       { "libvorbisenc-2", new String[] {}, false },
       { "libvorbisfile-3", new String[] {}, false },
-      { "libwavpack-1", new String[] {}, false },
+      { "libwavpack", new String[] {}, false },
+      { "libwebrtc_audio_processing-0", new String[] {}, false },
       { "libwinpthread-1", new String[] {}, false },
+      { "libx264-157", new String[] {}, false },
       { "libxml2-2", new String[] {}, false },
       { "libz-1", new String[] {}, false },
+      { "libzbar-0", new String[] {}, false },
+      { "swresample-3", new String[] {}, false }  
+  };
+
+  static final Object[][] WINDOWS_MSVC_DEPENDENCIES = {
+      // Base GStreamer native libraries for a COMPLETE MSVC installation
       { "avcodec-58", new String[] {}, false },
       { "avfilter-7", new String[] {}, false },
       { "avformat-58", new String[] {}, false },
       { "avutil-56", new String[] {}, false },
-      { "swresample-3", new String[] {}, false }
-    };
+      { "bz2", new String[] {}, false },
+      { "cairo-2", new String[] {}, false },
+      { "cairo-gobject-2", new String[] {}, false },
+      { "cairo-script-interpreter-2", new String[] {}, false },
+      { "dv-4", new String[] {}, false },
+      { "ffi-7", new String[] {}, false },
+      { "fontconfig-1", new String[] {}, false },
+      { "fribidi-0", new String[] {}, false },
+      { "gdk_pixbuf-2.0-0", new String[] {}, false },
+      { "ges-1.0-0", new String[] {}, false },
+      { "gio-2.0-0", new String[] {}, false },
+      { "glib-2.0-0", new String[] {}, false },
+      { "gmodule-2.0-0", new String[] {}, false },
+      { "gobject-2.0-0", new String[] {}, false },
+      { "graphene-1.0-0", new String[] {}, false },
+      { "gstadaptivedemux-1.0-0", new String[] {}, false },
+      { "gstallocators-1.0-0", new String[] {}, false },
+      { "gstapp-1.0-0", new String[] {}, false },
+      { "gstaudio-1.0-0", new String[] {}, false },
+      { "gstbadaudio-1.0-0", new String[] {}, false },
+      { "gstbase-1.0-0", new String[] {}, false },
+      { "gstbasecamerabinsrc-1.0-0", new String[] {}, false },
+      { "gstcheck-1.0-0", new String[] {}, false },
+      { "gstcodecparsers-1.0-0", new String[] {}, false },
+      { "gstcodecs-1.0-0", new String[] {}, false },
+      { "gstcontroller-1.0-0", new String[] {}, false },
+      { "gstd3d11-1.0-0", new String[] {}, false },
+      { "gstfft-1.0-0", new String[] {}, false },
+      { "gstgl-1.0-0", new String[] {}, false },
+      { "gstinsertbin-1.0-0", new String[] {}, false },
+      { "gstisoff-1.0-0", new String[] {}, false },
+      { "gstmpegts-1.0-0", new String[] {}, false },
+      { "gstnet-1.0-0", new String[] {}, false },
+      { "gstpbutils-1.0-0", new String[] {}, false },
+      { "gstphotography-1.0-0", new String[] {}, false },
+      { "gstplay-1.0-0", new String[] {}, false },
+      { "gstplayer-1.0-0", new String[] {}, false },
+      { "gstreamer-1.0-0", new String[] {}, false },
+      { "gstriff-1.0-0", new String[] {}, false },
+      { "gstrtp-1.0-0", new String[] {}, false },
+      { "gstrtsp-1.0-0", new String[] {}, false },
+      { "gstrtspserver-1.0-0", new String[] {}, false },
+      { "gstsctp-1.0-0", new String[] {}, false },
+      { "gstsdp-1.0-0", new String[] {}, false },
+      { "gsttag-1.0-0", new String[] {}, false },
+      { "gsttranscoder-1.0-0", new String[] {}, false },
+      { "gsturidownloader-1.0-0", new String[] {}, false },
+      { "gstvalidate-1.0-0", new String[] {}, false },
+      { "gstvideo-1.0-0", new String[] {}, false },
+      { "gstwebrtc-1.0-0", new String[] {}, false },
+      { "gstwinrt-1.0-0", new String[] {}, false },
+      { "gthread-2.0-0", new String[] {}, false },
+      { "harfbuzz", new String[] {}, false },
+      { "intl-8", new String[] {}, false },
+      { "json-glib-1.0-0", new String[] {}, false },
+      { "libass-9", new String[] {}, false },
+      { "libcharset-1", new String[] {}, false },
+      { "libcroco-0.6-3", new String[] {}, false },
+      { "libcrypto-1_1-x64", new String[] {}, false },
+      { "libdca-0", new String[] {}, false },
+      { "libexpat-1", new String[] {}, false },
+      { "libFLAC-8", new String[] {}, false },
+      { "libfreetype-6", new String[] {}, false },
+      { "libgcc_s_seh-1", new String[] {}, false },
+      { "libiconv-2", new String[] {}, false },
+      { "libjpeg-8", new String[] {}, false },
+      { "libkate-1", new String[] {}, false },
+      { "libmp3lame-0", new String[] {}, false },
+      { "libmpg123-0", new String[] {}, false },
+      { "libogg-0", new String[] {}, false },
+      { "liboggkate-1", new String[] {}, false },
+      { "libopencore-amrnb-0", new String[] {}, false },
+      { "libopencore-amrwb-0", new String[] {}, false },
+      { "libpng16-16", new String[] {}, false },
+      { "librsvg-2-2", new String[] {}, false },
+      { "librtmp-1", new String[] {}, false },
+      { "libsbc-1", new String[] {}, false },
+      { "libspandsp-2", new String[] {}, false },
+      { "libspeex-1", new String[] {}, false },
+      { "libsrt", new String[] {}, false },
+      { "libssl-1_1-x64", new String[] {}, false },
+      { "libstdc++-6", new String[] {}, false },
+      { "libtheora-0", new String[] {}, false },
+      { "libtheoradec-1", new String[] {}, false },
+      { "libtheoraenc-1", new String[] {}, false },
+      { "libtiff-5", new String[] {}, false },
+      { "libturbojpeg-0", new String[] {}, false },
+      { "libvo-aacenc-0", new String[] {}, false },
+      { "libvorbis-0", new String[] {}, false },
+      { "libvorbisenc-2", new String[] {}, false },
+      { "libvorbisfile-3", new String[] {}, false },
+      { "libwinpthread-1", new String[] {}, false },
+      { "libx264-157", new String[] {}, false },
+      { "libxml2-2", new String[] {}, false },
+      { "libzbar-0", new String[] {}, false },
+      { "nice-10", new String[] {}, false },
+      { "openh264-6", new String[] {}, false },
+      { "openjp2", new String[] {}, false },
+      { "opus-0", new String[] {}, false },
+      { "orc-0.4-0", new String[] {}, false },
+      { "orc-test-0.4-0", new String[] {}, false },
+      { "pango-1.0-0", new String[] {}, false },
+      { "pangocairo-1.0-0", new String[] {}, false },
+      { "pangoft2-1.0-0", new String[] {}, false },
+      { "pangowin32-1.0-0", new String[] {}, false },
+      { "pixman-1-0", new String[] {}, false },
+      { "psl-5", new String[] {}, false },
+      { "soup-2.4-1", new String[] {}, false },
+      { "sqlite3-0", new String[] {}, false },
+      { "srtp2-1", new String[] {}, false },
+      { "swresample-3", new String[] {}, false },
+      { "wavpack", new String[] {}, false },
+      { "z-1", new String[] {}, false }      
+  };
 
   static final Object[][] LINUX_DEPENDENCIES = {
       // GLib libraries
@@ -215,16 +346,9 @@ public class LibraryLoader {
       { "orc-0.4", new String[] {}, false },
       { "orc-test-0.4", new String[] {}, false },
       { "postproc", new String[] {}, false }
-    };
+  };
 
-  static final Object[][] MACOS_DEPENDENCIES = { };
-
-  static final Object[][] DEFAULT_DEPENDENCIES = { };
-
-  static final Object[][] dependencies =
-    Platform.isWindows() ? WINDOWS_DEPENDENCIES :
-    Platform.isLinux() ? LINUX_DEPENDENCIES :
-    Platform.isMac() ? MACOS_DEPENDENCIES : DEFAULT_DEPENDENCIES;
+  static Object[][] dependencies;
 
 
   private static final Map<String, Object> loadedMap =
@@ -238,7 +362,24 @@ public class LibraryLoader {
   }
 
 
-  private void preLoadLibs() {
+  private void preLoadLibs(int winBuildType) {
+    if (Platform.isWindows()) {
+      if (winBuildType == 0) {
+        System.err.println("Seems like you are trying to use GStreamer native libraries older than 1.20, which are not supported.");
+        return;
+      } else if (winBuildType == 1) {
+        dependencies = WINDOWS_MINGW_DEPENDENCIES;
+      } else if (winBuildType == 2) {
+        dependencies = WINDOWS_MSVC_DEPENDENCIES;
+      }
+
+    } else if (Platform.isLinux()) {
+      dependencies = LINUX_DEPENDENCIES;
+    } else {
+      // No need for dependencies pre-loading on MacOS
+      return;
+    }
+
     for (Object[] a : dependencies) {
       load(a[0].toString(), DummyLibrary.class, true, 0, (Boolean) a[2]);
     }
@@ -246,10 +387,8 @@ public class LibraryLoader {
 
 
   static private String[] findDeps(String name) {
-
     for (Object[] a : dependencies) {
       if (name.equals(a[0])) {
-
         return (String[]) a[1];
       }
     }
@@ -314,7 +453,7 @@ public class LibraryLoader {
     UnsatisfiedLinkError linkError = null;
 
     for (String fmt : nameFormats) {
-      try {
+      try {      
         String s = String.format(fmt, name);
         //System.out.println("Trying to load library file " + s);
         Object obj = Native.loadLibrary(s, clazz);
@@ -341,10 +480,10 @@ public class LibraryLoader {
   }
 
 
-  public static synchronized LibraryLoader getInstance() {
+  public static synchronized LibraryLoader getInstance(int winBuildType) {
     if (null == instance) {
       instance = new LibraryLoader();
-      instance.preLoadLibs();
+      instance.preLoadLibs(winBuildType);
     }
     return instance;
   }
