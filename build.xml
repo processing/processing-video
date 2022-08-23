@@ -159,9 +159,10 @@ ${line.separator}with the path to where you have the code for Processing 4 check
     <antcall target="macosx-dist-sign" />
 
     <!-- copy library files (jar and gstreamer natives) -->
-    <copy todir="dist/tmp/video/library">
-      <fileset dir="library" />
-    </copy>
+    <exec executable="cp">
+      <arg value="-R"/>
+      <arg line="library dist/tmp/video"/>
+    </exec>
 
     <!-- copy examples -->
     <copy todir="dist/tmp/video/examples">
@@ -203,7 +204,23 @@ ${line.separator}with the path to where you have the code for Processing 4 check
 
     <!-- create zip package -->
     <delete file="dist/video.zip"/>
-    <zip destfile="dist/video.zip" basedir="dist/tmp" excludes="**/.DS_Store" />
+    
+    <echo>
+
+    Creating zip package...
+    </echo> 
+
+    <exec executable="find" dir="dist">
+      <arg line="tmp -name '.DS_Store' -type f -delete" />
+    </exec>
+
+    <exec executable="ditto" dir="dist">
+      <arg line="-c -k -rsrc tmp video.zip" />
+    </exec>
+
+    <echo>
+    Done!
+    </echo>
 
     <!-- copy properties to use by download manager -->
     <copy file="library.properties" tofile="dist/video.txt" />
