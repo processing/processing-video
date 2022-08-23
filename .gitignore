@@ -7,4 +7,6 @@ bin
 /library/windows*
 /library/linux*
 
+/library/video.jar
+
 local.properties
