@@ -179,7 +179,7 @@ ${line.separator}with the path to where you have the code for Processing 4 check
 
     <!-- create the java reference of the library -->
     <mkdir dir="dist/tmp/video/reference" />
-    <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-21"
+    <javadoc bottom="Processing video library by The Processing Foundation. (c) 2011-22"
              classpath="${core.classpath.location}/core.jar;
                         library/gst1-java-core-1.4.0.jar;
                         library/jna.jar;
@@ -191,15 +191,21 @@ ${line.separator}with the path to where you have the code for Processing 4 check
              doctitle="Javadocs: Video"
              windowtitle="Javadocs: Video">
 
-      <!-- TODO these are reeeaally out of date [fry 200929] -->
-      <link href="http://java.sun.com/javase/6/docs/api/" />
-      <link href="http://processing.googlecode.com/svn/trunk/processing/build/javadoc/core/" />
+      <link href="https://docs.oracle.com/en/java/javase/11/docs/api/" />
 
-      <taglet name="ExampleTaglet" path="resources/code" />
-      <fileset dir="dist/tmp/video/src" defaultexcludes="yes">
-        <!-- add packages to be added to reference. -->
-        <include name="**/*"/>
-      </fileset>
+      <tag name="webref" enabled="false" />
+      <tag name="nowebref" enabled="false" />
+      <tag name="generate" enabled="false" />
+      <tag name="instanceName" enabled="false" />
+      <tag name="see_external" enabled="false" />
+      <tag name="brief" description="In brief:" />
+      <tag name="usage" />
+      <arg value="-Xdoclint:reference,accessibility" />
+
+      <packageset dir="dist/tmp/video/src">
+        <include name="**/*" />
+      </packageset>
+      
     </javadoc>
 
     <!-- create zip package -->
