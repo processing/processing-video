@@ -30,6 +30,7 @@ package processing.video;
 import processing.core.*;
 
 import java.nio.*;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -104,7 +105,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent) {
     // Attempt to use a default resolution
-    this(parent, 640, 480, null, 0);
+    this(parent, 640, 480, null, 30);
   }
 
 
@@ -116,7 +117,7 @@ public class Capture extends PImage implements PConstants {
    */
   public Capture(PApplet parent, String device) {
     // Attempt to use a default resolution
-    this(parent, 640, 480, device, 0);
+    this(parent, 640, 480, device, 30);
   }
 
 
@@ -126,7 +127,7 @@ public class Capture extends PImage implements PConstants {
    *  @param height height in pixels
    */
   public Capture(PApplet parent, int width, int height) {
-    this(parent, width, height, null, 0);
+    this(parent, width, height, null, 30);
   }
 
 
@@ -144,7 +145,16 @@ public class Capture extends PImage implements PConstants {
    *  @see Capture#list()
    */
   public Capture(PApplet parent, int width, int height, String device) {
-    this(parent, width, height, device, 0);
+    this(parent, width, height, device, 30);
+  }
+
+
+  /**
+   *  Open a specific capture device with a given framerate
+   *  @see Capture#list()
+   */
+  public Capture(PApplet parent, String device, float fps) {
+    this(parent, 640, 480, device, fps);
   }
 
 
@@ -177,9 +187,11 @@ public class Capture extends PImage implements PConstants {
 
       pixels = null;
 
-      rgbSink.disconnect(newSampleListener);
-      rgbSink.disconnect(newPrerollListener);
-      rgbSink.dispose();
+      if (rgbSink != null) {
+        rgbSink.disconnect(newSampleListener);
+        rgbSink.disconnect(newPrerollListener);
+        rgbSink.dispose();
+      }
       pipeline.setState(org.freedesktop.gstreamer.State.NULL);
       pipeline.getState();
       pipeline.getBus().dispose();
@@ -492,9 +504,8 @@ public class Capture extends PImage implements PConstants {
       }
 
       for (int i=0; i < devices.size(); i++) {
-      String deviceName = assignDisplayName(devices.get(i), i);
+        String deviceName = assignDisplayName(devices.get(i), i);
         if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
-          // Found device
           srcElement = devices.get(i).createElement(null);
           break;
         }
@@ -516,8 +527,10 @@ public class Capture extends PImage implements PConstants {
     if (frameRate != 0.0) {
       frameRateString = ", framerate=" + fpsToFramerate(frameRate);
     } else {
-      frameRateString = "";
+      System.err.println("The capture framerate cannot be zero!");
+      return;
     }
+
     capsfilter.set("caps", Caps.fromString("video/x-raw, width=" + width + ", height=" + height + frameRateString));
 
     initSink();
@@ -719,22 +732,22 @@ public class Capture extends PImage implements PConstants {
    *  @return array of device names
    */
   static public String[] list() {
-	    Video.init();
+    Video.init();
 
-	    String[] out;
+    String[] out;
 
-	    DeviceMonitor monitor = new DeviceMonitor();
-	    monitor.addFilter("Video/Source", null);
-	    devices = monitor.getDevices();
-	    monitor.close();
+    DeviceMonitor monitor = new DeviceMonitor();
+    monitor.addFilter("Video/Source", null);
+    devices = monitor.getDevices();
+    monitor.close();
 
-	    out = new String[devices.size()];
-	    for (int i = 0; i < devices.size(); i++) {
-	    	Device dev = devices.get(i);
-	    	out[i] = checkCameraDuplicates(dev) > 1 ? assignDisplayName(dev, i) : dev.getDisplayName();
-	    }
+    out = new String[devices.size()];
+    for (int i = 0; i < devices.size(); i++) {
+      Device dev = devices.get(i);
+      out[i] = checkCameraDuplicates(dev) > 1 ? assignDisplayName(dev, i) : dev.getDisplayName();
+    }
 
-	    return out;
+    return out;
   }
 
   static private String assignDisplayName(Device d, int pos) {
