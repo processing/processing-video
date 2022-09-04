@@ -298,10 +298,9 @@ public class LibraryLoader {
       { "gmodule-2.0", new String[] {}, false },
       { "gthread-2.0", new String[] {}, false },
 
-      // Core GStreamer libraries... somehow the order of these
-      // libraries is important. For example, if gstbase comes 
-      // before gstreamer, then pluggin scanning crashes with
-      // "cannot register existing type 'GstObject'" error
+      // Core GStreamer libraries... the order of these libraries is important (while it does
+      // not seem to matter for Windows. For example, if gstbase comes before gstreamer, then
+      // plugin scanning crashes with "cannot register existing type 'GstObject'" error
       { "gstreamer-1.0", new String[] {}, false },
       { "gstbase-1.0", new String[] {}, false },
       { "gsturidownloader-1.0", new String[] {}, false },
