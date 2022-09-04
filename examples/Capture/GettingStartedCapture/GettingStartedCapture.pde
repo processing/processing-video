@@ -26,12 +26,14 @@ void setup() {
     // The camera can be initialized directly using an element
     // from the array returned by list():
     cam = new Capture(this, cameras[0]);
-    // Or, the settings can be defined based on the text in the list
-    //cam = new Capture(this, 640, 480, "Built-in iSight", 30);
-    
-    // Start capturing the images from the camera
-    cam.start();
+
+    // Or, the camera name can be retrieved from the list (you need
+    // to enter valid a width, height, and frame rate for the camera).
+    //cam = new Capture(this, 640, 480, "FaceTime HD Camera (Built-in)", 30);
   }
+
+  // Start capturing the images from the camera
+  cam.start();
 }
 
 void draw() {
