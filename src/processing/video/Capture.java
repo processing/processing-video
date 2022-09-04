@@ -750,6 +750,97 @@ public class Capture extends PImage implements PConstants {
     return out;
   }
 
+  // This is a temporary addition until it's decided how to bring back resolution/framerate caps to the official API.
+  // The old way of doing things is still listed in the video tutorial:
+  // https://processing.org/tutorials/video
+  static public String[] getCapabilities(String device) {
+    for (int i=0; i < devices.size(); i++) {
+      String deviceName = assignDisplayName(devices.get(i), i);
+      if (devices.get(i).getDisplayName().equals(device) || devices.get(i).getName().equals(device) || deviceName.equals(device)) {
+        return parseCaps(devices.get(i));
+      }
+    }
+    return new String[]{};
+  }
+
+  static private String[] parseCaps(Device dev) {
+    String[] caps = dev.getCaps().toString().split(";");
+    ArrayList<String> devCaps = new ArrayList<String>();
+
+    for (String cap: caps) {
+      if (cap.indexOf("video/x-raw,") == -1) continue; // Looking for raw caps (excluding GLMemory stuff)
+
+      int indexWidth = cap.indexOf("width");
+      int indexHeight = cap.indexOf("height");
+      int indexFramerate = cap.indexOf("framerate");
+
+      String stringWidth = "";
+      String stringHeight = "";
+      String stringFramerate = "";
+
+      if (0 < indexWidth && 0 < indexHeight && 0 < indexFramerate) {
+        stringWidth = cap.substring(indexWidth, cap.indexOf(',', indexWidth));
+        stringHeight = cap.substring(indexHeight, cap.indexOf(", format", indexHeight));
+        stringFramerate = cap.substring(indexFramerate, cap.indexOf(']', indexFramerate));
+      }
+//      PApplet.println("=======>", cap);
+      if (0 < stringHeight.indexOf("{")) {
+        // A list of heights... something like "height=(int){ 448, 600 }
+        stringHeight = stringHeight.substring(13, stringHeight.length() - 1);
+        String[] values = stringHeight.split(",");
+        for (String value: values) {
+          stringHeight = "height=(int)" + value.trim();
+          addCapStringsToList(stringWidth, stringHeight, stringFramerate, devCaps);
+        }
+      } else {
+        addCapStringsToList(stringWidth, stringHeight, stringFramerate, devCaps);
+      }
+    }
+
+    String[] out = new String[0];
+    return devCaps.toArray(out);
+  }
+
+  static private void addCapStringsToList(String stringWidth, String stringHeight, String stringFramerate, ArrayList<String> devCaps) {
+    if (0 < stringWidth.split("=").length) { // Expecting a string of the form "width=(int)1600"
+      stringWidth = stringWidth.substring(11);
+      try {
+        Integer.parseInt(stringWidth);
+      } catch (NumberFormatException ex) {
+        stringHeight = "";
+      }
+    }
+    if (0 < stringHeight.split("=").length) { // Expecting a string of the form "height=(int)896"
+      stringHeight = stringHeight.substring(12);
+      try {
+        Integer.parseInt(stringHeight);
+      } catch (NumberFormatException ex) {
+        stringHeight = "";
+      }
+    }
+    if (0 < stringFramerate.split("=,").length) { // Expecting a string of the form "framerate=(fraction)[ 5/1, 10000000/333333"
+      stringFramerate = stringFramerate.substring(stringFramerate.indexOf("="));
+      String[] fpsParts = stringFramerate.split(",");
+      if (1 < fpsParts.length) {
+        stringFramerate = fpsParts[1].trim();
+        fpsParts = stringFramerate.split("/");
+        if (fpsParts.length == 2) {
+          try {
+            int fpsNumerator = Integer.parseInt(fpsParts[0]);
+            int fpsDenominator = Integer.parseInt(fpsParts[1]);
+            int fps = fpsNumerator / fpsDenominator;
+            stringFramerate = String.valueOf(fps);
+          } catch (NumberFormatException ex) {
+            stringFramerate = "";
+          }
+        }
+      }
+    }
+    if (!stringWidth.equals("") && !stringHeight.equals("") && !stringFramerate.equals("")) {
+      devCaps.add("size=" + stringWidth + "x" + stringHeight + ",fps=" + stringFramerate);
+    }
+  }
+
   static private String assignDisplayName(Device d, int pos) {
 	  String s = "";
 	  int count = 1;
