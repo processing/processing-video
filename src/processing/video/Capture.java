@@ -535,8 +535,16 @@ public class Capture extends PImage implements PConstants {
 
     initSink();
 
-    pipeline.addMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
-    Element.linkMany(srcElement, videoscale, videoconvert, capsfilter, rgbSink);
+    pipeline.add(srcElement);
+    pipeline.add(videoscale);
+    pipeline.add(videoconvert);
+    pipeline.add(capsfilter);
+    pipeline.add(rgbSink);
+
+    srcElement.link(videoscale);
+    videoscale.link(videoconvert);
+    videoconvert.link(capsfilter);
+    capsfilter.link(rgbSink);
 
     makeBusConnections(pipeline.getBus());
   }
