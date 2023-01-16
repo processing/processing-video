@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Set the appropriae build dist folder in this env variable
+# Set the appropriate build dist folder in this env variable
 meson_build_folder=/home/andres/code/gstreamer/build-1.20/lib/x86_64-linux-gnu
 
 # Copy the build to the native library folder for linux
