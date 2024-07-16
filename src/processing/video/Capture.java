@@ -738,6 +738,8 @@ public class Capture extends PImage implements PConstants {
    *  Multiple devices can have identical display names, appending ' #n' to devices
    *  with duplicate display names.
    *  @return array of device names
+   *  @webref capture
+   *  @webBrief Get a list of all capture device names
    */
   static public String[] list() {
     Video.init();
